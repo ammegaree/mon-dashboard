@@ -3,6 +3,7 @@
 import { h, pastilles, notifier, ouvrirModale, confirmer } from '../ui.js';
 import { genererQr, qrEnSvg } from './qr.js';
 import * as S from './synchro.js';
+import * as N from './nuage.js';
 import * as store from '../store.js';
 import { enregistrerPage } from '../registry.js';
 import { PALETTE, validerSauvegarde } from '../schema.js';
@@ -484,6 +485,202 @@ function contenuSauvegarde(redessiner) {
   );
 }
 
+// ---- Synchronisation automatique ----
+
+function ilYa(iso) {
+  if (!iso) return '';
+  const sec = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (sec < 10) return 'à l’instant';
+  if (sec < 60) return `il y a ${sec} secondes`;
+  const min = Math.round(sec / 60);
+  if (min < 60) return `il y a ${min} minute${min > 1 ? 's' : ''}`;
+  const h_ = Math.round(min / 60);
+  return `il y a ${h_} heure${h_ > 1 ? 's' : ''}`;
+}
+
+function champMotDePasse(id, etiquette, placeholder = '') {
+  const champ = h('input', { type: 'password', class: 'champ', id, autocomplete: 'off', placeholder, 'aria-label': etiquette });
+  return { champ, ligne: h('div', { class: 'rangee-champ champ-large' }, h('label', { class: 'etiquette', for: id }, etiquette), champ) };
+}
+
+function contenuNuage() {
+  const zone = h('div', { class: 'pile' });
+
+  let arreter = () => {};
+  const dessiner = () => {
+    if (!zone.isConnected && zone.dataset.dessine) {
+      arreter(); // la carte a été fermée : on cesse d'écouter
+      return;
+    }
+    zone.dataset.dessine = '1';
+    const e = N.etatNuage();
+    zone.replaceChildren(N.nuageActif() ? vueActive(e) : vueConfiguration());
+  };
+
+  const vueConfiguration = () => {
+    const erreur = h('p', { class: 'erreur-formulaire', role: 'alert' });
+    erreur.hidden = true;
+    const code = h('textarea', { class: 'champ champ-note', rows: 2, placeholder: 'Colle ici le « code de configuration » copié depuis un autre appareil (facultatif)', 'aria-label': 'Code de configuration' });
+    const depot = h('input', { type: 'text', class: 'champ', id: 'nu-depot', placeholder: 'ton-nom/mon-dashboard-donnees', autocapitalize: 'off', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Dépôt privé' });
+    const jeton = champMotDePasse('nu-jeton', 'Code d’accès', 'github_pat_…');
+    const mdp = champMotDePasse('nu-mdp', 'Mot de passe');
+    const conf = champMotDePasse('nu-conf', 'Confirmer');
+    code.addEventListener('input', () => {
+      const lu = N.lireCodeDeConfiguration(code.value);
+      if (lu) {
+        depot.value = lu.depot;
+        jeton.champ.value = lu.jeton;
+        notifier('Code reconnu ✦ Il ne reste que le mot de passe.');
+      }
+    });
+    const bouton = h('button', { class: 'bouton bouton-jaune', type: 'submit' }, '☁️ Activer la synchronisation');
+    return h(
+      'div',
+      { class: 'pile' },
+      h('p', null, 'Tes appareils se mettent à jour tout seuls : tu notes sur le téléphone, c’est sur l’ordinateur quelques secondes plus tard. Tes données partent chiffrées dans un dépôt GitHub privé : même GitHub ne peut pas les lire.'),
+      h(
+        'details',
+        { class: 'repliable-discret' },
+        h('summary', null, '📝 Ce qu’il faut préparer (une seule fois, sur le premier appareil)'),
+        h(
+          'ol',
+          { class: 'liste-numerotee' },
+          h('li', null, ['Sur github.com, crée un nouveau dépôt ', h('strong', null, 'privé'), ' nommé ', h('code', null, 'mon-dashboard-donnees'), ' (coche « Add a README file »).']),
+          h('li', null, ['Crée un « code d’accès » limité à ce dépôt : Settings › Developer settings › Personal access tokens › Fine-grained tokens › Generate new token. Dépôt : seulement mon-dashboard-donnees ; droit : ', h('strong', null, 'Contents : Read and write'), '.']),
+          h('li', null, 'Copie le code (il commence par github_pat_), puis remplis le formulaire ci-dessous.')
+        ),
+        h('p', { class: 'meta' }, 'Le guide détaillé est dans GUIDE-SYNCHRO.md.')
+      ),
+      h(
+        'form',
+        {
+          class: 'pile',
+          onsubmit: async (ev) => {
+            ev.preventDefault();
+            erreur.hidden = true;
+            bouton.disabled = true;
+            bouton.textContent = 'Vérification…';
+            try {
+              await N.activer({ depot: depot.value, jeton: jeton.champ.value, motDePasse: mdp.champ.value, confirmation: conf.champ.value });
+              notifier('Synchronisation activée ✦');
+            } catch (e) {
+              erreur.textContent = e && e.message ? e.message : 'Impossible d’activer la synchronisation.';
+              erreur.hidden = false;
+            } finally {
+              // En cas d'erreur le formulaire reste tel quel (avec son message) ; en cas de réussite, la carte s'est déjà redessinée.
+              bouton.disabled = false;
+              bouton.textContent = '☁️ Activer la synchronisation';
+            }
+          },
+        },
+        code,
+        h('div', { class: 'rangee-champ champ-large' }, h('label', { class: 'etiquette', for: 'nu-depot' }, 'Dépôt privé'), depot),
+        jeton.ligne,
+        mdp.ligne,
+        conf.ligne,
+        h('p', { class: 'meta' }, 'Le mot de passe sert à chiffrer tes données : note-le bien, on ne peut pas le retrouver. Sur le deuxième appareil, tu le retapes (une seule fois), la confirmation n’est alors pas nécessaire.'),
+        erreur,
+        h('div', { class: 'rangee droite' }, bouton)
+      )
+    );
+  };
+
+  const vueActive = (e) => {
+    const textes = {
+      ok: e.dernierLe ? `✅ À jour (${ilYa(e.dernierLe)})` : '✅ Activée',
+      synchro: '🔄 Synchronisation en cours…',
+      'hors-ligne': '📴 Pas de connexion : tes notes restent ici et partiront au retour du réseau.',
+      erreur: `⚠️ ${e.message || 'Un problème est survenu, nouvel essai bientôt.'}`,
+      bloque: `🔒 ${e.message || 'Accès refusé.'}`,
+    };
+    const jetonNouveau = champMotDePasse('nu-jeton2', 'Nouveau code d’accès', 'github_pat_…');
+    const erreur = h('p', { class: 'erreur-formulaire', role: 'alert' });
+    erreur.hidden = true;
+    return h(
+      'div',
+      { class: 'pile' },
+      h('p', { class: 'telephone-etat' }, textes[e.statut] || textes.ok),
+      h('p', { class: 'meta mono' }, `Dépôt : ${e.depot}`),
+      e.statut === 'bloque' &&
+        /code d’accès|refuse/i.test(e.message || '') &&
+        h(
+          'form',
+          {
+            class: 'pile',
+            onsubmit: async (ev) => {
+              ev.preventDefault();
+              try {
+                await N.changerJeton(jetonNouveau.champ.value);
+                notifier('Code d’accès mis à jour ✦');
+              } catch (err) {
+                erreur.textContent = err.message;
+                erreur.hidden = false;
+              }
+            },
+          },
+          jetonNouveau.ligne,
+          erreur,
+          h('div', { class: 'rangee droite' }, h('button', { class: 'bouton bouton-jaune', type: 'submit' }, 'Mettre à jour le code'))
+        ),
+      h(
+        'div',
+        { class: 'rangee rangee-souple' },
+        h(
+          'button',
+          {
+            class: 'bouton bouton-jaune',
+            type: 'button',
+            onclick: async () => {
+              const r = await N.synchroniser();
+              if (r) notifier(r.recu || r.pousse ? 'Synchronisé ✦' : 'Déjà à jour ✦');
+            },
+          },
+          '🔄 Synchroniser maintenant'
+        ),
+        h(
+          'button',
+          {
+            class: 'bouton',
+            type: 'button',
+            onclick: async () => {
+              const texte = N.codeDeConfiguration();
+              try {
+                await navigator.clipboard.writeText(texte);
+                notifier('Code copié ✦ Colle-le sur l’autre appareil (puis supprime le message).');
+              } catch {
+                notifier('Je n’ai pas pu copier automatiquement.');
+              }
+            },
+          },
+          '📋 Copier le code de configuration'
+        )
+      ),
+      h('p', { class: 'meta' }, 'Pour ajouter un appareil : copie le code de configuration, ouvre Réglages › Synchronisation automatique sur l’autre appareil, colle-le, puis tape ton mot de passe de chiffrement. Le code de configuration donne accès à ton dépôt : ne le laisse pas traîner.'),
+      h(
+        'button',
+        {
+          class: 'bouton bouton-petit',
+          type: 'button',
+          onclick: async () => {
+            const oui = await confirmer({
+              titre: 'Arrêter la synchronisation sur cet appareil ?',
+              message: 'Tes données restent ici, et la copie chiffrée reste dans le dépôt. Tu pourras réactiver plus tard avec le même mot de passe.',
+              oui: 'Arrêter',
+              couleur: 'orange',
+            });
+            if (oui) await N.desactiver();
+          },
+        },
+        'Arrêter sur cet appareil'
+      )
+    );
+  };
+
+  arreter = N.abonnerNuage(dessiner);
+  N.chargerConfig().then(dessiner);
+  return zone;
+}
+
 // ---- Sur mon téléphone ----
 
 // Le QR code et l'adresse viennent du petit serveur, qui ne les donne qu'à l'ordinateur lui-même.
@@ -641,6 +838,14 @@ function rendre(racine, { redessiner }) {
       resume: r.actif ? `Proposé à partir de ${r.heure}` : 'Désactivé',
       couleur: 'rose',
       contenu: () => contenuRappelCheckin(donnees),
+    },
+    {
+      id: 'nuage',
+      icone: '☁️',
+      titre: 'Synchronisation automatique',
+      resume: N.nuageActif() ? 'Active : tes appareils se mettent à jour' : 'Téléphone et ordinateur toujours à jour',
+      couleur: 'violet',
+      contenu: () => contenuNuage(),
     },
     store.modeStockage() === 'serveur' && {
       id: 'telephone',

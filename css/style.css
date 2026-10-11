@@ -4035,3 +4035,15 @@ details.groupe-idees[open] > summary {
 .bloc-synchro h3 {
   margin: 0;
 }
+
+.erreur-formulaire {
+  margin: 0;
+  padding: 8px 12px;
+  font-weight: 600;
+  background: var(--corail);
+  border: 2.5px solid var(--encre);
+  border-radius: 12px;
+}
+.erreur-formulaire[hidden] {
+  display: none;
+}

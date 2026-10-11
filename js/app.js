@@ -32,6 +32,7 @@ import { ouvrirOngletEtudes } from './modules/etudes.js';
 import * as Minuteur from './modules/minuteur.js';
 import { demarrerRappelCheckin } from './modules/bien-etre-checkin.js';
 import { ouvrirRecherche, activerRaccourciRecherche } from './modules/recherche.js';
+import { demarrerNuage, abonnerNuage, etatNuage, nuageActif } from './modules/nuage.js';
 
 const racine = document.getElementById('app');
 let zoneContenu = null;
@@ -232,10 +233,16 @@ function majMinuteurMini() {
   zoneMinuteur.querySelector('.minuteur-mini-libelle').textContent = libelle;
 }
 
+function texteNuage() {
+  if (!nuageActif()) return '';
+  const e = etatNuage();
+  return { synchro: ' · ☁ synchro…', 'hors-ligne': ' · ☁ hors ligne', erreur: ' · ☁ à revoir', bloque: ' · ☁ à revoir' }[e.statut] || ' · ☁ à jour';
+}
+
 function dessinerStatut(etat) {
   const texte = TEXTES_STATUT[etat] || '';
   // Publié sur un site, les données sont gardées dans l'appareil lui-même.
-  zoneStatut.textContent = store.modeStockage() === 'autonome' ? texte.replace('sur ton ordinateur', 'sur cet appareil') : texte;
+  zoneStatut.textContent = (store.modeStockage() === 'autonome' ? texte.replace('sur ton ordinateur', 'sur cet appareil') : texte) + (etat === 'ok' ? texteNuage() : '');
   zoneStatut.dataset.etat = etat;
   zoneBandeau.hidden = etat !== 'conflit';
 }
@@ -353,6 +360,7 @@ async function demarrer() {
   Minuteur.initialiser();
   majMinuteurMini();
   store.abonnerEtat(dessinerStatut);
+  abonnerNuage(() => dessinerStatut(store.etatEnregistrement()));
   dessinerStatut(store.etatEnregistrement());
   store.abonner(surChangement);
   window.addEventListener('categories-modifiees', dessinerNavigation);
@@ -365,6 +373,7 @@ async function demarrer() {
   });
   allerVersLaPage();
   demarrerRappelCheckin();
+  demarrerNuage();
 }
 
 demarrer();

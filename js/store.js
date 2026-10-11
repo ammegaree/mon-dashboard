@@ -26,6 +26,19 @@ let copieAvantImport = false; // le prochain enregistrement garde d'abord une co
 
 const DELAI = 400;
 
+// Pour la synchronisation automatique : un compteur de modifications, et ceux qui veulent être prévenus.
+let compteurModifs = 0;
+const abonnesModifs = new Set();
+
+export function numeroModifications() {
+  return compteurModifs;
+}
+
+export function abonnerModifications(fn) {
+  abonnesModifs.add(fn);
+  return () => abonnesModifs.delete(fn);
+}
+
 export function lire() {
   return donnees;
 }
@@ -92,6 +105,8 @@ export async function sauvegardesLocales() {
 // (utile quand on tape dans un champ).
 export function modifier(fn, { rendre = true } = {}) {
   fn(donnees);
+  compteurModifs++;
+  abonnesModifs.forEach((f) => f());
   aEnregistrer = true;
   planifier(DELAI);
   if (rendre) abonnes.forEach((f) => f());
@@ -112,12 +127,27 @@ export async function remplacer(nouvellesDonnees) {
   donnees = migrer(nouvellesDonnees);
   donnees.meta.rev = rev;
   donnees.meta.importeLe = new Date().toISOString();
+  compteurModifs++;
+  abonnesModifs.forEach((f) => f());
   aEnregistrer = true;
   copieAvantImport = true;
   clearTimeout(minuteur);
   abonnes.forEach((f) => f());
   await enregistrer();
   return etat;
+}
+
+// Applique des données venues d'ailleurs (synchronisation) sans passer par la logique d'import.
+// Refusé (faux) si quelque chose a été modifié ici depuis que ces données ont été préparées.
+export function appliquerExterne(nouvelles, numeroAttendu) {
+  if (!donnees || numeroAttendu !== compteurModifs) return false;
+  const meta = donnees.meta;
+  donnees = migrer(JSON.parse(JSON.stringify(nouvelles)));
+  donnees.meta = meta;
+  aEnregistrer = true;
+  planifier(0);
+  abonnes.forEach((f) => f());
+  return true;
 }
 
 export function abonner(fn) {
