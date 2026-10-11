@@ -7,6 +7,7 @@ import { ouvrirProjet } from './ui-projets.js';
 import { ouvrirTacheMaison } from './ui-maison.js';
 import { ouvrirEcheance } from './ui-echeances.js';
 import { ouvrirPlanification } from './ui-sport.js';
+import { ouvrirCircuit, ouvrirAjoutExercice } from './ui-circuits.js';
 import { ouvrirDepense } from './ui-budget.js';
 import { ouvrirEnvie } from './ui-loisirs.js';
 import { ouvrirEntree } from './bien-etre-journal.js';
@@ -30,7 +31,9 @@ enregistrerActionIdee('budget', { id: 'depense', libelle: '💶 Noter comme dép
 // Loisirs
 enregistrerActionIdee('loisirs', { id: 'envie', libelle: '🎬 L’ajouter à mes envies', executer: (n, retirer) => ouvrirEnvie({ titre: n.texte, surEnregistrement: retirer }) });
 
-// Sport
+// Sport : l'idée devient un exercice (dans un circuit qui existe, ou au début d'un nouveau circuit), ou une séance prévue.
+enregistrerActionIdee('sport', { id: 'circuit', libelle: '🔁 Ajouter à un circuit', executer: (n, retirer) => ouvrirAjoutExercice({ titre: n.texte, surEnregistrement: retirer }) });
+enregistrerActionIdee('sport', { id: 'nouveau-circuit', libelle: '🆕 Créer un nouveau circuit', executer: (n, retirer) => ouvrirCircuit({ exercicesInitiaux: [{ titre: n.texte }], surCreation: retirer }) });
 enregistrerActionIdee('sport', { id: 'seance', libelle: '🗓 Planifier une séance', executer: (n, retirer) => ouvrirPlanification({ note: n.texte, surEnregistrement: retirer }) });
 
 // Bien-être

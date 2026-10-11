@@ -9,6 +9,7 @@ import { aujourdhui, ajouterJours, formatLong, formatCourt, nomDuJour, jourSemai
 import * as T from './taches.js';
 import * as R from './routines.js';
 import { categorieDe, ouvrirAjoutTache, ouvrirRecurrentes, ligneTache, ligneInfo } from './actions-taches.js';
+import { toutesLesCategories } from './agenda-donnees.js';
 import { ligneRendezVous } from './ui-rendezvous.js';
 import { trierRendezVous } from './rendezvous.js';
 import { phraseDuJour, checkinDuJour } from './bien-etre-donnees.js';
@@ -316,7 +317,7 @@ function rendre(racine, { redessiner }) {
   };
   for (const item of acocher.filter((e) => !e.groupe)) range(item, 'items');
   for (const item of elements.filter((e) => e.type === 'info' && !e.groupe)) range(item, 'infos');
-  const cartes = donnees.categories
+  const cartes = toutesLesCategories(donnees)
     .filter((c) => parCategorie.has(c.id))
     .map((c) => carteCategorie(c, parCategorie.get(c.id).items, parCategorie.get(c.id).infos, donnees, contexte));
 

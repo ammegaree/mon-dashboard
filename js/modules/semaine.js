@@ -9,6 +9,8 @@ import { basculerCoche } from './taches.js';
 import { trierRendezVous } from './rendezvous.js';
 import { categorieDe, ouvrirAjoutTache } from './actions-taches.js';
 import { ouvrirRendezVous, lieuOuLien } from './ui-rendezvous.js';
+import { toutesLesCategories, filtrerParCategories } from './agenda-donnees.js';
+import { ouvrirCategoriesAgenda } from './ui-agenda.js';
 
 const VUES = [
   { id: 'jour', nom: 'Jour' },
@@ -18,6 +20,7 @@ const VUES = [
 
 let vue = 'semaine';
 let dateVue = null; // null = aujourd'hui ; sinon une date « AAAA-MM-JJ » de la période regardée
+const filtre = new Set(); // catégories gardées à l'écran (vide = tout voir)
 
 function blocRendezVous(item, donnees) {
   const cat = categorieDe(donnees, item.categorieId);
@@ -89,8 +92,10 @@ function colonneJour(date, reel, donnees, { detail = false } = {}) {
 }
 
 // Ce qui est visible pour un jour : rendez-vous puis tâches (sans routines ni éléments discrets).
-function contenuDuJour(date, donnees) {
-  const elements = elementsDuJour(date, donnees).filter((e) => !e.groupe && !e.discret);
+// `filtrer: false` ignore le filtre par catégorie (pour la légende, qui montre tout ce qu'il y a).
+function contenuDuJour(date, donnees, { filtrer = true } = {}) {
+  const tous = elementsDuJour(date, donnees).filter((e) => !e.groupe && !e.discret);
+  const elements = filtrer ? filtrerParCategories(donnees, tous, filtre) : tous;
   return {
     rdv: trierRendezVous(elements.filter((e) => e.type === 'rdv')),
     taches: elements.filter((e) => e.type === 'tache'),
@@ -219,11 +224,16 @@ function rendre(racine, { redessiner }) {
           })();
   let nbRdv = 0;
   let nbTaches = 0;
+  const utilisees = new Set(); // les catégories présentes dans la période (filtre ignoré) : la légende et le filtre
   for (const j of joursComptes) {
     const c = contenuDuJour(j, donnees);
     nbRdv += c.rdv.length;
     nbTaches += c.taches.length;
+    const toutes = contenuDuJour(j, donnees, { filtrer: false });
+    for (const item of [...toutes.rdv, ...toutes.taches]) utilisees.add(categorieDe(donnees, item.categorieId).id);
   }
+  // Une catégorie filtrée reste proposée même si elle est absente de cette période, pour pouvoir la retirer.
+  const legende = toutesLesCategories(donnees).filter((c) => utilisees.has(c.id) || filtre.has(c.id));
 
   let titre;
   let sousTitre;
@@ -290,14 +300,53 @@ function rendre(racine, { redessiner }) {
     h(
       'div',
       { class: 'barre-actions' },
-      h('p', { class: 'mono doux resume-semaine' }, `${nbRdv} rendez-vous · ${nbTaches} chose${nbTaches > 1 ? 's' : ''} à faire`),
+      h('p', { class: 'mono doux resume-semaine' }, `${nbRdv} rendez-vous · ${nbTaches} chose${nbTaches > 1 ? 's' : ''} à faire${filtre.size ? ' (filtré)' : ''}`),
       h(
         'div',
         { class: 'rangee rangee-souple' },
+        h('button', { class: 'bouton', type: 'button', title: 'Perso, Social, Rendez-vous… : ajouter, renommer, supprimer', onclick: () => ouvrirCategoriesAgenda() }, '🏷️ Catégories'),
         h('button', { class: 'bouton', type: 'button', onclick: () => ouvrirAjoutTache({ date: dateAjout }) }, '＋ Tâche'),
         h('button', { class: 'bouton bouton-jaune', type: 'button', onclick: () => ouvrirRendezVous({ date: dateAjout }) }, '＋ Rendez-vous')
       )
     ),
+    legende.length > 0 &&
+      h(
+        'div',
+        { class: 'legende-calendrier', role: 'group', 'aria-label': 'Filtrer par catégorie' },
+        legende.map((c) => {
+          const actif = filtre.has(c.id);
+          return h(
+            'button',
+            {
+              class: 'puce-filtre' + (actif ? ' actif' : ''),
+              type: 'button',
+              style: `--cat: var(--${c.couleur})`,
+              'aria-pressed': actif ? 'true' : 'false',
+              title: actif ? 'Cliquer pour ne plus filtrer' : 'Cliquer pour ne voir que cette catégorie',
+              onclick: () => {
+                if (actif) filtre.delete(c.id);
+                else filtre.add(c.id);
+                redessiner();
+              },
+            },
+            h('span', { class: 'pastille-cat', 'aria-hidden': 'true' }),
+            `${c.icone} ${c.nom}`
+          );
+        }),
+        filtre.size > 0 &&
+          h(
+            'button',
+            {
+              class: 'puce-action',
+              type: 'button',
+              onclick: () => {
+                filtre.clear();
+                redessiner();
+              },
+            },
+            '✕ Tout voir'
+          )
+      ),
     corps
   );
 

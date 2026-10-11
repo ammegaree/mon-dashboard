@@ -7,6 +7,7 @@
 import { PAGES } from '../registry.js';
 import { formatCourt } from '../dates.js';
 import { formaterEuros } from './budget-montants.js';
+import { toutesLesCategories } from './agenda-donnees.js';
 
 // « Éléphant » → « elephant »
 export function normaliser(texte) {
@@ -56,7 +57,7 @@ export function extrait(texte, requeteTermes, longueur = 70) {
 // ---- Les sources ----
 // Chaque source rend des éléments { id, titre, details: [textes], sous?, date?, categorieId? }.
 
-const nomCat = (d, id) => d.categories.find((c) => c.id === id)?.nom || '';
+const nomCat = (d, id) => toutesLesCategories(d).find((c) => c.id === id)?.nom || '';
 
 const SOURCES = [
   {

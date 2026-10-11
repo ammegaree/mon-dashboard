@@ -4047,3 +4047,137 @@ details.groupe-idees[open] > summary {
 .erreur-formulaire[hidden] {
   display: none;
 }
+
+/* ---- Catégories du calendrier ---- */
+.champ-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.puces-agenda {
+  align-items: center;
+  padding-top: 10px;
+  border-top: 2.5px dashed var(--encre);
+}
+.etiquette-puces {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+.puce-action {
+  min-height: 36px;
+  padding: 4px 11px;
+  background: transparent;
+  border: 2.5px dashed var(--encre);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.puce-action:hover {
+  background: var(--creme);
+}
+.nouvelle-categorie-agenda {
+  padding: 12px;
+  background: var(--creme);
+  border: 2.5px solid var(--encre);
+  border-radius: 12px;
+}
+.erreur-douce:empty {
+  display: none;
+}
+.legende-calendrier {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.legende-calendrier li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 860px) {
+  .puce-action {
+    min-height: 44px;
+  }
+}
+@media (max-width: 860px) {
+  .echantillon {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* Filtre du calendrier : les pastilles de la légende sont cliquables. */
+.puce-filtre {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 11px;
+  background: var(--blanc);
+  border: 2.5px solid var(--encre);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.puce-filtre:hover {
+  background: var(--creme);
+}
+.puce-filtre.actif {
+  background: var(--cat, var(--jaune));
+  box-shadow: var(--ombre-petite);
+}
+.legende-calendrier {
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 860px) {
+  .puce-filtre {
+    min-height: 44px;
+  }
+}
+
+/* Brain dump : la carte de saisie (le champ en grand, puis « Ranger dans » + Noter) */
+.carte-saisie .champ-saisie {
+  width: 100%;
+  min-height: 92px;
+  resize: vertical;
+  line-height: 1.4;
+}
+.rangee-saisie {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.saisie-rangement {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.saisie-rangement .champ {
+  width: 100%;
+  text-overflow: ellipsis;
+}
+.aide-saisie {
+  margin: 0;
+}
+
+/* Une page courte ne doit pas étirer le bandeau du haut : tout le vide reste en bas. */
+@media (max-width: 860px) {
+  .coque {
+    grid-template-rows: auto 1fr;
+    align-content: start;
+  }
+}

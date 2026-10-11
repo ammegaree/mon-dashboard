@@ -227,8 +227,8 @@ export function ouvrirPlanification({ planId = null, ponctuelleId = null, date =
                   const ok = await confirmer({
                     titre: 'Retirer cette séance du planning ?',
                     message: plan
-                      ? 'Elle ne reviendra plus chaque semaine. Les séances déjà faites restent dans ton journal.'
-                      : 'Elle sera retirée du planning. Les séances déjà faites restent dans ton journal.',
+                      ? 'Elle ne reviendra plus chaque semaine. Les séances déjà faites restent dans ton récap.'
+                      : 'Elle sera retirée du planning. Les séances déjà faites restent dans ton récap.',
                     oui: 'Retirer',
                     non: 'Garder',
                     couleur: 'jaune',
@@ -295,7 +295,7 @@ export function ouvrirType({ id = null } = {}) {
                 onclick: async () => {
                   const ok = await confirmer({
                     titre: 'Supprimer cette catégorie ?',
-                    message: `« ${existant.nom} » sera retirée, ainsi que ses séances prévues. Tes circuits sont gardés (rangés « sans catégorie ») et les séances déjà faites restent dans ton journal.`,
+                    message: `« ${existant.nom} » sera retirée, ainsi que ses séances prévues. Tes circuits sont gardés (rangés « sans catégorie ») et les séances déjà faites restent dans ton récap.`,
                     oui: 'Supprimer',
                     non: 'Garder',
                   });

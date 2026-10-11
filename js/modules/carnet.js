@@ -1,7 +1,7 @@
 // Page « Brain dump » : on note tout ce qui passe par la tête, sans trier ; on range ensuite dans une
 // catégorie, ou on en fait une tâche, une recette, un projet… (voir idees-actions.js).
 
-import { h, vider } from '../ui.js';
+import { h, vider, pastilles } from '../ui.js';
 import { enregistrerPage } from '../registry.js';
 import * as store from '../store.js';
 import { aujourdhui, formatCourt } from '../dates.js';
@@ -35,7 +35,7 @@ function rendreNotes(conteneur, ctx) {
   const categories = donnees.categories.filter((c) => !c.archivee || compte.get(c.id));
 
   // Saisie : une ligne, Entrée pour noter. On peut coller plusieurs lignes d'un coup.
-  const champ = h('textarea', { class: 'champ champ-saisie', rows: 1, placeholder: 'Ce qui te passe par la tête… (Entrée)', 'aria-label': 'Nouvelle idée' });
+  const champ = h('textarea', { class: 'champ champ-saisie', rows: 3, placeholder: 'Ce qui te passe par la tête…', 'aria-label': 'Nouvelle idée' });
   const categorieSaisie = selectCategorie({ donnees, valeur: filtre && filtre !== C.SANS_CATEGORIE ? filtre : null, id: 'bd-page-categorie' });
   const noter = () => {
     if (!champ.value.trim()) return;
@@ -68,7 +68,28 @@ function rendreNotes(conteneur, ctx) {
     h(
       'div',
       { class: 'pile pile-large' },
-      h('div', { class: 'rangee rangee-souple' }, champ, categorieSaisie, h('button', { class: 'bouton bouton-jaune', type: 'button', onclick: noter }, 'Noter')),
+      h(
+        'section',
+        { class: 'fenetre carte-saisie', style: '--cat: var(--jaune)' },
+        h('div', { class: 'fenetre-barre' }, pastilles(), h('h2', { class: 'fenetre-titre' }, 'Note vite')),
+        h(
+          'div',
+          { class: 'fenetre-corps pile' },
+          champ,
+          h(
+            'div',
+            { class: 'rangee-saisie' },
+            h(
+              'div',
+              { class: 'saisie-rangement' },
+              h('label', { class: 'etiquette', for: 'bd-page-categorie' }, 'Ranger dans'),
+              categorieSaisie
+            ),
+            h('button', { class: 'bouton bouton-jaune', type: 'button', onclick: noter }, 'Noter')
+          ),
+          h('p', { class: 'meta aide-saisie' }, 'Touche Entrée pour noter. Colle plusieurs lignes : une idée par ligne.')
+        )
+      ),
       total > 0 &&
         h(
           'div',

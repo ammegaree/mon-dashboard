@@ -75,6 +75,14 @@ export function circuitsDuType(d, typeId) {
   return S(d).circuits.filter((c) => (c.typeId || null) === (typeId || null));
 }
 
+// Tous les circuits, regroupés par catégorie de sport (dans l'ordre des types, puis « sans catégorie »).
+// Les groupes sans circuit n'apparaissent pas.
+export function circuitsParType(d) {
+  const groupes = S(d).types.map((t) => ({ type: t, circuits: circuitsDuType(d, t.id) }));
+  groupes.push({ type: null, circuits: circuitsDuType(d, null) });
+  return groupes.filter((g) => g.circuits.length > 0);
+}
+
 export function ajouterCircuit(d, { nom, typeId, note }) {
   const c = { id: nouvelId(), nom: String(nom || '').trim(), typeId: typeId && typeParId(d, typeId) ? typeId : null, note: String(note || '').trim(), exercices: [] };
   S(d).circuits.push(c);

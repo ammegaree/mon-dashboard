@@ -68,7 +68,7 @@ export function ouvrirRecherche() {
     couleur: 'turquoise',
     large: true,
     corps: (fermer) => {
-      const champ = h('input', { type: 'text', class: 'champ champ-titre champ-recherche', placeholder: 'Une tâche, une recette, un contact, une envie…', 'aria-label': 'Rechercher', autocomplete: 'off', spellcheck: 'false' });
+      const champ = h('input', { type: 'text', class: 'champ champ-titre champ-recherche', placeholder: 'Une tâche, une recette, un contact…', 'aria-label': 'Rechercher', autocomplete: 'off', spellcheck: 'false' });
       const zone = h('div', { class: 'recherche-resultats', role: 'listbox', 'aria-label': 'Résultats' });
       let boutons = [];
       let actif = -1;

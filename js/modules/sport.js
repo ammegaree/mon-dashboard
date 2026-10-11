@@ -1,4 +1,4 @@
-// Page du domaine « Sport » : Vue d'ensemble, Planning, Journal, Circuits (et les catégories de sport).
+// Page du domaine « Sport » : Vue d'ensemble, Planning, Récap (l'onglet « journal » en interne), Circuits (et les catégories de sport).
 // Elle remplace la page générique des domaines pour la catégorie « sport ».
 // Ton : encourageant. On montre ce qui est fait ; on ne signale jamais ce qui ne l'est pas.
 
@@ -16,7 +16,7 @@ import { ouvrirSeance, ouvrirPlanification, ouvrirType } from './ui-sport.js';
 const ONGLETS = [
   { id: 'ensemble', titre: "Vue d'ensemble", icone: '🏃‍♀️' },
   { id: 'planning', titre: 'Planning', icone: '🗓️' },
-  { id: 'journal', titre: 'Journal', icone: '📓' },
+  { id: 'journal', titre: 'Récap', icone: '📓' },
   { id: 'circuits', titre: 'Circuits', icone: '🔁' },
 ];
 
@@ -218,7 +218,7 @@ function rendrePlanning(conteneur, ctx) {
   );
 }
 
-// ---- Onglet « Journal » ----
+// ---- Onglet « Récap » (identifiant interne : « journal ») ----
 
 function tuile(valeur, libelle, couleur) {
   return h('div', { class: 'tuile', style: `--cat: var(--${couleur})` }, h('span', { class: 'tuile-valeur mono' }, valeur), h('span', { class: 'tuile-libelle' }, libelle));
@@ -267,7 +267,7 @@ function rendreJournal(conteneur, ctx) {
           )
       ),
       seances.length === 0
-        ? h('p', { class: 'vide' }, "Ton journal t'attend : chaque séance que tu notes, même courte, y trouve sa place ✦")
+        ? h('p', { class: 'vide' }, "Ton récap t'attend : chaque séance que tu notes, même courte, y trouve sa place ✦")
         : h(
             'ul',
             { class: 'liste-simple' },

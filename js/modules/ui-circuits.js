@@ -4,6 +4,25 @@ import { h, ouvrirModale, confirmer, notifier, etincelles } from '../ui.js';
 import * as store from '../store.js';
 import * as S from './sport-donnees.js';
 
+// ---- Un petit champ numérique avec son étiquette (séries, répétitions, durée, repos) ----
+
+function nombre(e, cle, libelle, max, placeholder = '') {
+  return h(
+    'label',
+    { class: 'mini-champ' },
+    h('span', { class: 'etiquette' }, libelle),
+    h('input', {
+      type: 'number',
+      class: 'champ champ-court',
+      min: 0,
+      max,
+      placeholder,
+      value: e[cle] ?? '',
+      oninput: (ev) => (e[cle] = ev.target.value === '' ? null : Number(ev.target.value)),
+    })
+  );
+}
+
 // ---- Choisir un circuit (séance faite, séance prévue) ----
 
 // Une liste déroulante : « Sans circuit » + les circuits du type choisi. Se met à jour avec `majType(typeId)`.
@@ -21,7 +40,8 @@ export function selectCircuit({ donnees, typeId, valeur = null, id = null }) {
 
 // ---- Créer / modifier un circuit ----
 
-export function ouvrirCircuit({ id = null, typeId = null, surCreation = null } = {}) {
+// `exercicesInitiaux` : pour un nouveau circuit, des exercices déjà là (par exemple une idée du brain dump).
+export function ouvrirCircuit({ id = null, typeId = null, surCreation = null, exercicesInitiaux = [] } = {}) {
   const donnees = store.lire();
   const existant = id ? S.circuitParId(donnees, id) : null;
   if (id && !existant) return;
@@ -42,26 +62,17 @@ export function ouvrirCircuit({ id = null, typeId = null, surCreation = null } =
       const note = h('input', { type: 'text', class: 'champ', value: existant?.note || '', placeholder: 'Une note : matériel, repos entre les tours… (facultatif)', maxLength: 200, 'aria-label': 'Note' });
 
       // Les exercices, dans l'ordre : un titre, puis séries, répétitions, durée, repos et une remarque.
-      const brouillon = (existant?.exercices || []).map((e) => ({ ...e }));
+      const brouillon = (existant?.exercices || exercicesInitiaux).map((e) => ({
+        id: null,
+        series: null,
+        repetitions: null,
+        dureeSec: null,
+        reposSec: null,
+        detail: '',
+        ...e,
+      }));
       const liste = h('ul', { class: 'liste-simple editeur-exercices' });
       const champTitre = h('input', { type: 'text', class: 'champ', placeholder: 'Nouvel exercice…', maxLength: 100, 'aria-label': 'Nouvel exercice' });
-
-      // Un petit champ numérique avec son étiquette.
-      const nombre = (e, cle, libelle, max, placeholder = '') =>
-        h(
-          'label',
-          { class: 'mini-champ' },
-          h('span', { class: 'etiquette' }, libelle),
-          h('input', {
-            type: 'number',
-            class: 'champ champ-court',
-            min: 0,
-            max,
-            placeholder,
-            value: e[cle] ?? '',
-            oninput: (ev) => (e[cle] = ev.target.value === '' ? null : Number(ev.target.value)),
-          })
-        );
 
       const dessiner = (focusIndex = null) => {
         liste.replaceChildren(
@@ -87,7 +98,7 @@ export function ouvrirCircuit({ id = null, typeId = null, surCreation = null } =
                 nombre(e, 'dureeSec', 'Durée (s)', 3600),
                 nombre(e, 'reposSec', 'Repos (s)', 3600)
               ),
-              h('input', { type: 'text', class: 'champ', value: e.detail || '', maxLength: 80, placeholder: 'Une remarque : côté droit puis gauche, avec haltères… (facultatif)', 'aria-label': `Remarque de l'exercice ${i + 1}`, oninput: (ev) => (e.detail = ev.target.value) })
+              h('input', { type: 'text', class: 'champ', value: e.detail || '', maxLength: 80, placeholder: 'Une remarque (facultatif)', 'aria-label': `Remarque de l'exercice ${i + 1}`, oninput: (ev) => (e.detail = ev.target.value) })
             );
           })
         );
@@ -156,7 +167,7 @@ export function ouvrirCircuit({ id = null, typeId = null, surCreation = null } =
                 onclick: async () => {
                   const ok = await confirmer({
                     titre: 'Supprimer ce circuit ?',
-                    message: `« ${existant.nom} » sera retiré. Les séances déjà faites restent dans ton journal.`,
+                    message: `« ${existant.nom} » sera retiré. Les séances déjà faites restent dans ton récap.`,
                     oui: 'Supprimer',
                     non: 'Garder',
                   });
@@ -174,6 +185,116 @@ export function ouvrirCircuit({ id = null, typeId = null, surCreation = null } =
         )
       );
       setTimeout(() => (existant ? champTitre : nom).focus(), 0);
+      return formulaire;
+    },
+  });
+}
+
+// ---- Ajouter un exercice à un circuit qui existe déjà (par exemple depuis une idée du brain dump) ----
+
+// `titre` : le nom de l'exercice (modifiable) ; `surEnregistrement(circuit)` : appelé une fois l'exercice ajouté.
+export function ouvrirAjoutExercice({ titre = '', circuitId = null, surEnregistrement = null } = {}) {
+  const donnees = store.lire();
+  const groupes = S.circuitsParType(donnees);
+
+  ouvrirModale({
+    titre: 'Ajouter à un circuit',
+    couleur: 'corail',
+    corps: (fermer) => {
+      if (groupes.length === 0) {
+        return h(
+          'div',
+          { class: 'pile' },
+          h('p', { class: 'doux' }, 'Tu n’as pas encore de circuit. Crée le premier : « ' + titre + ' » en sera le premier exercice.'),
+          h(
+            'div',
+            { class: 'rangee droite' },
+            h('button', { class: 'bouton', type: 'button', onclick: fermer }, 'Annuler'),
+            h(
+              'button',
+              {
+                class: 'bouton bouton-jaune',
+                type: 'button',
+                onclick: () => {
+                  fermer();
+                  ouvrirCircuit({ exercicesInitiaux: [{ titre }], surCreation: surEnregistrement });
+                },
+              },
+              '＋ Créer un circuit'
+            )
+          )
+        );
+      }
+
+      const exercice = { titre, series: null, repetitions: null, dureeSec: null, reposSec: null, detail: '' };
+      const choix = h(
+        'select',
+        { class: 'champ', id: 'ajout-circuit', 'aria-label': 'Circuit' },
+        groupes.map((g) =>
+          h(
+            'optgroup',
+            { label: g.type ? `${g.type.icone} ${g.type.nom}` : 'Sans catégorie' },
+            g.circuits.map((c) => h('option', { value: c.id }, `🔁 ${c.nom} (${c.exercices.length} exercice${c.exercices.length > 1 ? 's' : ''})`))
+          )
+        )
+      );
+      const tousLesIds = groupes.flatMap((g) => g.circuits.map((c) => c.id));
+      choix.value = tousLesIds.includes(circuitId) ? circuitId : tousLesIds[0];
+
+      const champTitre = h('input', { type: 'text', class: 'champ champ-titre', value: titre, maxLength: 100, 'aria-label': 'Nom de l’exercice' });
+      champTitre.addEventListener('input', () => {
+        exercice.titre = champTitre.value;
+        champTitre.classList.remove('champ-erreur');
+      });
+      const remarque = h('input', {
+        type: 'text',
+        class: 'champ',
+        maxLength: 80,
+        placeholder: 'Une remarque (facultatif)',
+        'aria-label': 'Remarque',
+        oninput: (ev) => (exercice.detail = ev.target.value),
+      });
+
+      const formulaire = h(
+        'form',
+        {
+          class: 'pile',
+          onsubmit: (e) => {
+            e.preventDefault();
+            if (!exercice.titre.trim()) {
+              champTitre.classList.add('champ-erreur');
+              champTitre.focus();
+              return;
+            }
+            let ajoute = null;
+            store.modifier((d) => (ajoute = S.ajouterExercice(d, choix.value, exercice)));
+            if (!ajoute) return;
+            const circuit = S.circuitParId(store.lire(), choix.value);
+            fermer();
+            notifier(`Ajouté à « ${circuit.nom} » ✦`);
+            surEnregistrement?.(circuit);
+          },
+        },
+        h('div', { class: 'rangee-champ champ-large' }, h('label', { class: 'etiquette', for: 'ajout-circuit' }, 'Dans quel circuit ?'), choix),
+        h('div', { class: 'rangee-champ champ-large' }, h('span', { class: 'etiquette' }, 'L’exercice'), champTitre),
+        h(
+          'div',
+          { class: 'rangee rangee-souple champs-exercice' },
+          nombre(exercice, 'series', 'Séries', 99),
+          nombre(exercice, 'repetitions', 'Répétitions', 999),
+          nombre(exercice, 'dureeSec', 'Durée (s)', 3600),
+          nombre(exercice, 'reposSec', 'Repos (s)', 3600)
+        ),
+        remarque,
+        h('p', { class: 'doux' }, 'Il est ajouté à la fin du circuit. Tout est facultatif sauf le nom : tu pourras le modifier ensuite en ouvrant le circuit.'),
+        h(
+          'div',
+          { class: 'rangee droite' },
+          h('button', { class: 'bouton', type: 'button', onclick: fermer }, 'Annuler'),
+          h('button', { class: 'bouton bouton-jaune', type: 'submit' }, 'Ajouter')
+        )
+      );
+      setTimeout(() => choix.focus(), 0);
       return formulaire;
     },
   });

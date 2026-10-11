@@ -44,6 +44,14 @@ export function donneesParDefaut() {
       { id: 'autre', nom: 'Autre', couleur: 'violet', icone: '✨', archivee: true },
     ],
 
+    // Catégories du calendrier (Perso, Social, Rendez-vous…) : de simples étiquettes pour les rendez-vous et les tâches.
+    // Ce ne sont pas des domaines de vie : pas de page ni d'entrée dans le menu.
+    categoriesAgenda: [
+      { id: 'agenda-perso', nom: 'Perso', couleur: 'rose', icone: '💛' },
+      { id: 'agenda-social', nom: 'Social', couleur: 'orange', icone: '🥂' },
+      { id: 'agenda-rendez-vous', nom: 'Rendez-vous', couleur: 'ciel', icone: '📅' },
+    ], // { id, nom, couleur, icone }
+
     // Tâches libres, ponctuelles ou récurrentes.
     // { id, titre, categorieId, date, recurrence, abandonnee, creeLe }
     // recurrence = null ou { frequence: 'jour'|'semaine'|'mois', jours: [dow], debut, fin, exceptions: [date] }

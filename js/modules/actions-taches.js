@@ -7,17 +7,14 @@ import { cleCoche, estCoche, enregistrerEditeur, editeurDe, actionCocheDe } from
 import { aujourdhui, formatLong } from '../dates.js';
 import * as T from './taches.js';
 import { formulaireTache } from './formulaire-tache.js';
+import { categorieParId } from './agenda-donnees.js';
 
 let derniereCategorie = 'autre';
 
 enregistrerEditeur('tache', (item) => ouvrirEdition(item.id, item.date));
 
 export function categorieDe(donnees, id) {
-  return (
-    donnees.categories.find((c) => c.id === id) ||
-    donnees.categories.find((c) => c.id === 'autre') ||
-    donnees.categories[0]
-  );
+  return categorieParId(donnees, id);
 }
 
 // ---- Ajouter ----
