@@ -7,7 +7,7 @@ import { enregistrerActionCoche, enregistrerEditeur } from '../registry.js';
 import { aujourdhui, JOURS } from '../dates.js';
 import * as S from './sport-donnees.js';
 import { echelle } from './bien-etre-checkin.js';
-import { selectCircuit } from './ui-circuits.js';
+import { choixCircuits } from './ui-circuits.js';
 
 // ---- Noter une séance faite ----
 
@@ -19,7 +19,7 @@ export function ouvrirSeance({ id = null, prevue = null, date = aujourdhui(), ty
   if (id && !existante) return;
 
   const typeInitial = existante?.typeId ?? prevue?.typeId ?? typeDepart ?? donnees.sport.types[0]?.id ?? null;
-  const circuitInitial = existante ? existante.circuitId : prevue?.circuitId ?? circuitDepart ?? null;
+  const circuitsInitiaux = existante ? S.idsCircuits(existante) : prevue ? S.idsCircuits(prevue) : circuitDepart ? [circuitDepart] : [];
   const dureeInitiale = existante?.dureeMin ?? prevue?.dureeMin ?? donnees.sport.types.find((t) => t.id === typeInitial)?.dureeMin ?? '';
 
   ouvrirModale({
@@ -34,7 +34,7 @@ export function ouvrirSeance({ id = null, prevue = null, date = aujourdhui(), ty
         donnees.sport.types.map((t) => h('option', { value: t.id, selected: t.id === typeInitial }, `${t.icone} ${t.nom}`))
       );
       type.value = typeInitial || '';
-      const circuit = selectCircuit({ donnees, typeId: typeInitial, valeur: circuitInitial, id: 'seance-circuit' });
+      const circuit = choixCircuits({ typeId: typeInitial, valeurs: circuitsInitiaux });
       const champDate = h('input', { type: 'date', class: 'champ', value: existante?.date || prevue?.date || date, required: true, id: 'seance-date' });
       const duree = h('input', { type: 'number', class: 'champ champ-court', min: 1, max: 600, value: dureeInitiale || '', placeholder: 'min', id: 'seance-duree' });
       const note = h('textarea', { class: 'champ champ-note', rows: 3, placeholder: 'Comment ça s\'est passé ? Une remarque, une sensation…', id: 'seance-note' }, existante?.note || '');
@@ -57,7 +57,7 @@ export function ouvrirSeance({ id = null, prevue = null, date = aujourdhui(), ty
               champDate.focus();
               return;
             }
-            const valeurs = { typeId: type.value || null, date: champDate.value, dureeMin: duree.value, ressenti: etat.ressenti, note: note.value, circuitId: circuit.valeur() };
+            const valeurs = { typeId: type.value || null, date: champDate.value, dureeMin: duree.value, ressenti: etat.ressenti, note: note.value, circuitIds: circuit.valeurs() };
             if (existante) store.modifier((d) => S.modifierSeance(d, existante.id, valeurs));
             else store.modifier((d) => S.enregistrerSeance(d, { ...valeurs, prevueCle: prevue?.cle || null }));
             fermer();
@@ -65,7 +65,7 @@ export function ouvrirSeance({ id = null, prevue = null, date = aujourdhui(), ty
           },
         },
         h('div', { class: 'rangee-champ champ-large' }, h('label', { class: 'etiquette', for: 'seance-type' }, 'Type de séance'), type),
-        h('div', { class: 'rangee-champ champ-large' }, h('label', { class: 'etiquette', for: 'seance-circuit' }, 'Circuit (facultatif)'), circuit.element),
+        h('div', { class: 'rangee-champ champ-large' }, h('span', { class: 'etiquette' }, 'Circuits (facultatif, tu peux en choisir plusieurs)'), circuit.element),
         h(
           'div',
           { class: 'rangee-options' },
@@ -131,7 +131,7 @@ export function ouvrirPlanification({ planId = null, ponctuelleId = null, date =
 
       const choixType = h('select', { class: 'champ', id: 'plan-type' }, types.map((t) => h('option', { value: t.id, selected: t.id === typeInitial }, `${t.icone} ${t.nom}`)));
       choixType.value = typeInitial;
-      const circuit = selectCircuit({ donnees, typeId: typeInitial, valeur: existant?.circuitId ?? null, id: 'plan-circuit' });
+      const circuit = choixCircuits({ typeId: typeInitial, valeurs: existant ? S.idsCircuits(existant) : [] });
       choixType.addEventListener('change', () => circuit.majType(choixType.value));
       const choixMode = h(
         'select',
@@ -180,7 +180,7 @@ export function ouvrirPlanification({ planId = null, ponctuelleId = null, date =
           class: 'pile',
           onsubmit: (e) => {
             e.preventDefault();
-            const base = { typeId: choixType.value, heure: heure.value, dureeMin: duree.value, circuitId: circuit.valeur() };
+            const base = { typeId: choixType.value, heure: heure.value, dureeMin: duree.value, circuitIds: circuit.valeurs() };
             if (mode === 'semaine') {
               if (jours.size === 0) {
                 notifier('Choisis au moins un jour.');
@@ -203,7 +203,7 @@ export function ouvrirPlanification({ planId = null, ponctuelleId = null, date =
           },
         },
         h('div', { class: 'rangee-champ champ-large' }, h('label', { class: 'etiquette', for: 'plan-type' }, 'Type de séance'), choixType),
-        h('div', { class: 'rangee-champ champ-large' }, h('label', { class: 'etiquette', for: 'plan-circuit' }, 'Circuit (facultatif)'), circuit.element),
+        h('div', { class: 'rangee-champ champ-large' }, h('span', { class: 'etiquette' }, 'Circuits (facultatif, tu peux en choisir plusieurs)'), circuit.element),
         h('div', { class: 'rangee-champ champ-large' }, h('label', { class: 'etiquette', for: 'plan-mode' }, 'Quand'), choixMode),
         ligneJours,
         ligneDate,

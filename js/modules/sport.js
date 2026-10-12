@@ -71,8 +71,16 @@ function resumeSeance(s) {
 
 // Le nom du circuit prévu pour une séance du planning (s'il y en a un).
 function circuitPrevu(x, donnees) {
-  const c = x.circuitId ? S.circuitParId(donnees, x.circuitId) : null;
-  return c ? `🔁 ${c.nom}` : '';
+  const noms = S.idsCircuits(x)
+    .map((id) => S.circuitParId(donnees, id)?.nom)
+    .filter(Boolean);
+  return noms.length ? `🔁 ${noms.join(' + ')}` : '';
+}
+
+// Les circuits faits pendant une séance du récap : « 🔁 Jambes + Bras ».
+function circuitsFaits(seance) {
+  const noms = S.circuitsDeSeance(seance).map((c) => c.nom).filter(Boolean);
+  return noms.length ? `🔁 ${noms.join(' + ')}` : '';
 }
 
 function ligneJour(x, donnees) {
@@ -86,7 +94,7 @@ function ligneJour(x, donnees) {
         { class: 'seance-bouton', type: 'button', title: 'Modifier la séance', onclick: () => ouvrirSeance({ id: x.seance.id }) },
         h('span', { class: 'seance-statut', 'aria-hidden': 'true' }, '✓'),
         h('span', { class: 'seance-texte' }, `${x.type.icone} ${x.type.nom}`),
-        h('span', { class: 'meta mono' }, [resumeSeance(x.seance), x.seance.circuitNom ? `🔁 ${x.seance.circuitNom}` : ''].filter(Boolean).join(' · '))
+        h('span', { class: 'meta mono' }, [resumeSeance(x.seance), circuitsFaits(x.seance)].filter(Boolean).join(' · '))
       )
     );
   }
@@ -279,7 +287,7 @@ function rendreJournal(conteneur, ctx) {
                 h(
                   'div',
                   { class: 'note-carnet-entete' },
-                  h('span', { class: 'pastille-domaine' }, `${s.icone} ${s.typeNom}${s.circuitNom ? ` · 🔁 ${s.circuitNom}` : ''}`),
+                  h('span', { class: 'pastille-domaine' }, `${s.icone} ${s.typeNom}${circuitsFaits(s) ? ` · ${circuitsFaits(s)}` : ''}`),
                   h('span', { class: 'meta mono' }, `${formatLong(s.date)}${s.dureeMin ? ` · ${s.dureeMin} min` : ''}`),
                   r && h('span', { title: r.nom, 'aria-label': `Ressenti : ${r.nom}` }, r.emoji),
                   h('button', { class: 'bouton-icone', type: 'button', title: 'Modifier', 'aria-label': `Modifier la séance du ${formatLong(s.date)}`, onclick: () => ouvrirSeance({ id: s.id }) }, '✎')

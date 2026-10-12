@@ -5,6 +5,7 @@
 import { enregistrerFournisseur, enregistrerReportable } from '../registry.js';
 import { nouvelId } from '../schema.js';
 import { jourSemaine, lundiDe, ajouterJours } from '../dates.js';
+import { normaliserLien } from './liens.js';
 
 const S = (d) => d.sport;
 
@@ -71,6 +72,25 @@ export function circuitParId(d, id) {
   return S(d).circuits.find((c) => c.id === id) || null;
 }
 
+// Les circuits liés à une séance prévue (plan, ponctuelle) ou faite : une liste d'identifiants.
+// Les anciennes données ne gardaient qu'un seul `circuitId` : on le lit comme une liste d'un élément.
+export function idsCircuits(x) {
+  if (Array.isArray(x?.circuitIds)) return x.circuitIds;
+  return x?.circuitId ? [x.circuitId] : [];
+}
+
+// Les identifiants demandés (`circuitIds`, ou l'ancien `circuitId`) qui existent encore, sans doublon.
+function circuitsValides(d, { circuitIds, circuitId } = {}) {
+  const brut = Array.isArray(circuitIds) ? circuitIds : circuitId ? [circuitId] : [];
+  return [...new Set(brut)].filter((id) => circuitParId(d, id));
+}
+
+// `circuitId` reste la première valeur, pour les appareils qui n'ont pas encore la nouvelle version.
+function poserCircuits(x, ids) {
+  x.circuitIds = ids;
+  x.circuitId = ids[0] || null;
+}
+
 export function circuitsDuType(d, typeId) {
   return S(d).circuits.filter((c) => (c.typeId || null) === (typeId || null));
 }
@@ -83,15 +103,16 @@ export function circuitsParType(d) {
   return groupes.filter((g) => g.circuits.length > 0);
 }
 
-export function ajouterCircuit(d, { nom, typeId, note }) {
-  const c = { id: nouvelId(), nom: String(nom || '').trim(), typeId: typeId && typeParId(d, typeId) ? typeId : null, note: String(note || '').trim(), exercices: [] };
+export function ajouterCircuit(d, { nom, typeId, note, lien }) {
+  const c = { id: nouvelId(), nom: String(nom || '').trim(), typeId: typeId && typeParId(d, typeId) ? typeId : null, note: String(note || '').trim(), lien: normaliserLien(lien), exercices: [] };
   S(d).circuits.push(c);
   return c;
 }
 
-export function modifierCircuit(d, id, { nom, typeId, note }) {
+export function modifierCircuit(d, id, { nom, typeId, note, lien }) {
   const c = circuitParId(d, id);
   if (!c) return;
+  if (lien !== undefined) c.lien = normaliserLien(lien);
   c.nom = String(nom || '').trim();
   c.typeId = typeId && typeParId(d, typeId) ? typeId : null;
   c.note = String(note || '').trim();
@@ -102,7 +123,7 @@ export function supprimerCircuit(d, id) {
   if (index === -1) return null;
   const [circuit] = S(d).circuits.splice(index, 1);
   // Les séances prévues qui l'utilisaient restent, simplement sans circuit.
-  for (const p of [...S(d).plan, ...S(d).ponctuelles]) if (p.circuitId === id) p.circuitId = null;
+  for (const p of [...S(d).plan, ...S(d).ponctuelles]) if (idsCircuits(p).includes(id)) poserCircuits(p, idsCircuits(p).filter((x) => x !== id));
   return { circuit, index };
 }
 
@@ -127,6 +148,7 @@ function exerciceNettoye(e) {
     dureeSec: nombreOuNull(e.dureeSec, 3600),
     reposSec: nombreOuNull(e.reposSec, 3600),
     detail: String(e.detail || '').trim(),
+    lien: normaliserLien(e.lien),
   };
 }
 
@@ -175,26 +197,26 @@ export function planSurvient(plan, date) {
   return (plan.jours || []).includes(jourSemaine(date));
 }
 
-export function ajouterPlan(d, { typeId, jours, heure, dureeMin, debut, circuitId }) {
+export function ajouterPlan(d, { typeId, jours, heure, dureeMin, debut, circuitId, circuitIds }) {
   const p = {
     id: nouvelId(),
     typeId,
-    circuitId: circuitId || null,
     jours: [...new Set(jours || [])].sort((a, b) => a - b),
     heure: heure || '',
     dureeMin: dureeOuNull(dureeMin),
     debut,
     archivee: false,
   };
+  poserCircuits(p, circuitsValides(d, { circuitIds, circuitId }));
   S(d).plan.push(p);
   return p;
 }
 
-export function modifierPlan(d, id, { typeId, jours, heure, dureeMin, circuitId }) {
+export function modifierPlan(d, id, { typeId, jours, heure, dureeMin, circuitId, circuitIds }) {
   const p = S(d).plan.find((x) => x.id === id);
   if (!p) return;
   p.typeId = typeId;
-  p.circuitId = circuitId || null;
+  poserCircuits(p, circuitsValides(d, { circuitIds, circuitId }));
   p.jours = [...new Set(jours || [])].sort((a, b) => a - b);
   p.heure = heure || '';
   p.dureeMin = dureeOuNull(dureeMin);
@@ -209,17 +231,18 @@ export function supprimerPlan(d, id) {
   S(d).plan = S(d).plan.filter((p) => p.id !== id);
 }
 
-export function ajouterPonctuelle(d, { typeId, date, heure, dureeMin, note, circuitId }) {
-  const p = { id: nouvelId(), typeId, circuitId: circuitId || null, date, heure: heure || '', dureeMin: dureeOuNull(dureeMin), note: (note || '').trim(), abandonnee: false };
+export function ajouterPonctuelle(d, { typeId, date, heure, dureeMin, note, circuitId, circuitIds }) {
+  const p = { id: nouvelId(), typeId, date, heure: heure || '', dureeMin: dureeOuNull(dureeMin), note: (note || '').trim(), abandonnee: false };
+  poserCircuits(p, circuitsValides(d, { circuitIds, circuitId }));
   S(d).ponctuelles.push(p);
   return p;
 }
 
-export function modifierPonctuelle(d, id, { typeId, date, heure, dureeMin, note, circuitId }) {
+export function modifierPonctuelle(d, id, { typeId, date, heure, dureeMin, note, circuitId, circuitIds }) {
   const p = S(d).ponctuelles.find((x) => x.id === id);
   if (!p) return;
   p.typeId = typeId;
-  p.circuitId = circuitId || null;
+  poserCircuits(p, circuitsValides(d, { circuitIds, circuitId }));
   p.date = date;
   p.heure = heure || '';
   p.dureeMin = dureeOuNull(dureeMin);
@@ -238,13 +261,13 @@ export function seancesPrevues(d, date) {
     if (!planSurvient(p, date)) continue;
     const type = typeParId(d, p.typeId);
     if (!type) continue;
-    prevues.push({ id: `p:${p.id}`, genre: 'plan', source: p.id, typeId: p.typeId, circuitId: p.circuitId || null, type, heure: p.heure, dureeMin: p.dureeMin ?? type.dureeMin, date });
+    prevues.push({ id: `p:${p.id}`, genre: 'plan', source: p.id, typeId: p.typeId, circuitId: p.circuitId || null, circuitIds: idsCircuits(p), type, heure: p.heure, dureeMin: p.dureeMin ?? type.dureeMin, date });
   }
   for (const p of S(d).ponctuelles) {
     if (p.date !== date || p.abandonnee) continue;
     const type = typeParId(d, p.typeId);
     if (!type) continue;
-    prevues.push({ id: `u:${p.id}`, genre: 'ponctuelle', source: p.id, typeId: p.typeId, circuitId: p.circuitId || null, type, heure: p.heure, dureeMin: p.dureeMin ?? type.dureeMin, date });
+    prevues.push({ id: `u:${p.id}`, genre: 'ponctuelle', source: p.id, typeId: p.typeId, circuitId: p.circuitId || null, circuitIds: idsCircuits(p), type, heure: p.heure, dureeMin: p.dureeMin ?? type.dureeMin, date });
   }
   return prevues
     .map((x) => ({ ...x, cle: `seance-prevue|${x.id}|${date}` }))
@@ -254,9 +277,9 @@ export function seancesPrevues(d, date) {
 
 // ---- Journal des séances faites ----
 
-export function enregistrerSeance(d, { typeId, date, dureeMin, ressenti, note, prevueCle, circuitId }) {
+export function enregistrerSeance(d, { typeId, date, dureeMin, ressenti, note, prevueCle, circuitId, circuitIds }) {
   const type = typeParId(d, typeId);
-  const circuit = circuitId ? circuitParId(d, circuitId) : null;
+  const ids = circuitsValides(d, { circuitIds, circuitId });
   const maintenant = new Date().toISOString();
   const s = {
     id: nouvelId(),
@@ -268,24 +291,35 @@ export function enregistrerSeance(d, { typeId, date, dureeMin, ressenti, note, p
     ressenti: ressenti >= 1 && ressenti <= 5 ? Number(ressenti) : null,
     note: (note || '').trim(),
     prevueCle: prevueCle || null,
-    circuitId: circuit ? circuit.id : null,
-    circuitNom: circuit ? circuit.nom : null,
     creeLe: maintenant,
     modifieLe: maintenant,
   };
+  poserCircuitsSeance(s, ids.map((id) => ({ id, nom: circuitParId(d, id).nom })));
   S(d).seances.push(s);
   return s;
 }
 
-export function modifierSeance(d, id, { typeId, date, dureeMin, ressenti, note, circuitId }) {
+// Les circuits faits pendant une séance, avec leur nom d'alors : [{ id, nom }].
+export function circuitsDeSeance(s) {
+  if (Array.isArray(s?.circuitIds)) return s.circuitIds.map((id, i) => ({ id, nom: (s.circuitNoms || [])[i] || '' }));
+  return s?.circuitId ? [{ id: s.circuitId, nom: s.circuitNom || '' }] : [];
+}
+
+// Le nom est gardé tel qu'il était : renommer un circuit ne change pas le récap. `circuitNom` / `circuitId` = le premier.
+function poserCircuitsSeance(s, liste) {
+  s.circuitIds = liste.map((c) => c.id);
+  s.circuitNoms = liste.map((c) => c.nom);
+  s.circuitId = liste[0]?.id || null;
+  s.circuitNom = liste[0]?.nom || null;
+}
+
+export function modifierSeance(d, id, { typeId, date, dureeMin, ressenti, note, circuitId, circuitIds }) {
   const s = S(d).seances.find((x) => x.id === id);
   if (!s) return;
-  if (circuitId !== undefined) {
-    const circuit = circuitId ? circuitParId(d, circuitId) : null;
-    if ((circuit ? circuit.id : null) !== s.circuitId) {
-      s.circuitId = circuit ? circuit.id : null;
-      s.circuitNom = circuit ? circuit.nom : null;
-    }
+  if (circuitIds !== undefined || circuitId !== undefined) {
+    const anciens = new Map(circuitsDeSeance(s).map((c) => [c.id, c.nom]));
+    const ids = circuitsValides(d, { circuitIds, circuitId });
+    poserCircuitsSeance(s, ids.map((cid) => ({ id: cid, nom: anciens.get(cid) || circuitParId(d, cid).nom })));
   }
   const type = typeParId(d, typeId);
   if (typeId !== s.typeId) {

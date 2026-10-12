@@ -89,7 +89,7 @@ export function donneesParDefaut() {
       types: [], // { id, nom, icone, dureeMin }
       plan: [], // { id, typeId, jours: [dow], heure, dureeMin, debut, archivee }   (séance qui revient chaque semaine)
       ponctuelles: [], // { id, typeId, date, heure, dureeMin, note, abandonnee }   (séance prévue une seule fois)
-      seances: [], // { id, typeId, typeNom, icone, date, dureeMin, ressenti, note, prevueCle, circuitId, circuitNom, creeLe, modifieLe }
+      seances: [], // { id, typeId, typeNom, icone, date, dureeMin, ressenti, note, prevueCle, circuitIds, circuitNoms (+ circuitId, circuitNom = le premier, pour les anciennes versions), creeLe, modifieLe }
       // Circuits personnalisés, rangés par type de séance (la « catégorie de sport »).
       circuits: [], // { id, nom, typeId | null, note, exercices: [{ id, titre, series, repetitions, dureeSec, reposSec, detail }] }
     },

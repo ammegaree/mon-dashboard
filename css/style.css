@@ -4701,3 +4701,23 @@ details.groupe-idees[open] > summary {
   font-size: 0.85rem;
   overflow-wrap: anywhere;
 }
+
+/* Lien vers une vidéo (circuits de sport) */
+.lien-video {
+  display: inline-block;
+  padding: 2px 10px;
+  color: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  background: var(--ciel);
+  border: 2.5px solid var(--encre);
+  border-radius: 999px;
+}
+.lien-video:hover {
+  background: var(--jaune);
+}
+.ligne-exercice > .lien-video {
+  flex: none;
+  margin-left: 40px;
+}

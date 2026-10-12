@@ -3,6 +3,7 @@
 import { h, ouvrirModale, confirmer, notifier, etincelles } from '../ui.js';
 import * as store from '../store.js';
 import * as S from './sport-donnees.js';
+import { normaliserLien } from './liens.js';
 
 // ---- Un petit champ numérique avec son étiquette (séries, répétitions, durée, repos) ----
 
@@ -23,19 +24,46 @@ function nombre(e, cle, libelle, max, placeholder = '') {
   );
 }
 
-// ---- Choisir un circuit (séance faite, séance prévue) ----
+// ---- Choisir un ou plusieurs circuits (séance faite, séance prévue) ----
 
-// Une liste déroulante : « Sans circuit » + les circuits du type choisi. Se met à jour avec `majType(typeId)`.
-export function selectCircuit({ donnees, typeId, valeur = null, id = null }) {
-  const select = h('select', { class: 'champ', id });
-  const remplir = (type, courant) => {
-    const circuits = S.circuitsDuType(store.lire(), type || null);
-    select.replaceChildren(h('option', { value: '' }, circuits.length ? 'Sans circuit' : 'Aucun circuit pour ce type'), ...circuits.map((c) => h('option', { value: c.id }, `🔁 ${c.nom}`)));
-    select.value = circuits.some((c) => c.id === courant) ? courant : '';
-    select.disabled = circuits.length === 0;
+// Des pastilles à cocher : les circuits du type choisi. On peut en cocher plusieurs.
+// `majType(typeId)` change de type (les coches qui n'existent plus dans ce type sont retirées) ; `valeurs()` rend les identifiants cochés.
+export function choixCircuits({ typeId, valeurs = [] }) {
+  const element = h('div', { class: 'pile pile-serre', role: 'group', 'aria-label': 'Circuits' });
+  let choisis = new Set(valeurs);
+  let affiches = []; // les circuits proposés, dans l'ordre d'affichage
+  const remplir = (type) => {
+    affiches = S.circuitsDuType(store.lire(), type || null);
+    choisis = new Set([...choisis].filter((id) => affiches.some((c) => c.id === id)));
+    element.replaceChildren(
+      ...(affiches.length === 0
+        ? [h('p', { class: 'doux' }, 'Aucun circuit pour ce type pour l’instant.')]
+        : [
+            h(
+              'div',
+              { class: 'puces' },
+              affiches.map((c) =>
+                h(
+                  'label',
+                  { class: 'puce', style: '--cat: var(--corail)' },
+                  h('input', {
+                    type: 'checkbox',
+                    checked: choisis.has(c.id),
+                    onchange: (e) => (e.target.checked ? choisis.add(c.id) : choisis.delete(c.id)),
+                  }),
+                  h('span', null, `🔁 ${c.nom}`)
+                )
+              )
+            ),
+          ])
+    );
   };
-  remplir(typeId, valeur);
-  return { element: select, majType: (type) => remplir(type, null), valeur: () => select.value || null };
+  remplir(typeId);
+  return {
+    element,
+    majType: (type) => remplir(type),
+    valeurs: () => affiches.map((c) => c.id).filter((id) => choisis.has(id)),
+  };
 }
 
 // ---- Créer / modifier un circuit ----
@@ -60,6 +88,7 @@ export function ouvrirCircuit({ id = null, typeId = null, surCreation = null, ex
       );
       type.value = existant ? existant.typeId || '' : typeId || '';
       const note = h('input', { type: 'text', class: 'champ', value: existant?.note || '', placeholder: 'Une note : matériel, repos entre les tours… (facultatif)', maxLength: 200, 'aria-label': 'Note' });
+      const lienCircuit = h('input', { type: 'text', class: 'champ', value: existant?.lien || '', placeholder: 'Lien d’une vidéo du circuit (facultatif)', maxLength: 300, inputmode: 'url', 'aria-label': 'Lien vidéo du circuit' });
 
       // Les exercices, dans l'ordre : un titre, puis séries, répétitions, durée, repos et une remarque.
       const brouillon = (existant?.exercices || exercicesInitiaux).map((e) => ({
@@ -69,6 +98,7 @@ export function ouvrirCircuit({ id = null, typeId = null, surCreation = null, ex
         dureeSec: null,
         reposSec: null,
         detail: '',
+        lien: '',
         ...e,
       }));
       const liste = h('ul', { class: 'liste-simple editeur-exercices' });
@@ -98,7 +128,8 @@ export function ouvrirCircuit({ id = null, typeId = null, surCreation = null, ex
                 nombre(e, 'dureeSec', 'Durée (s)', 3600),
                 nombre(e, 'reposSec', 'Repos (s)', 3600)
               ),
-              h('input', { type: 'text', class: 'champ', value: e.detail || '', maxLength: 80, placeholder: 'Une remarque (facultatif)', 'aria-label': `Remarque de l'exercice ${i + 1}`, oninput: (ev) => (e.detail = ev.target.value) })
+              h('input', { type: 'text', class: 'champ', value: e.detail || '', maxLength: 80, placeholder: 'Une remarque (facultatif)', 'aria-label': `Remarque de l'exercice ${i + 1}`, oninput: (ev) => (e.detail = ev.target.value) }),
+              h('input', { type: 'text', class: 'champ', value: e.lien || '', maxLength: 300, placeholder: 'Lien d’une vidéo (facultatif)', inputmode: 'url', 'aria-label': `Lien vidéo de l'exercice ${i + 1}`, oninput: (ev) => (e.lien = ev.target.value) })
             );
           })
         );
@@ -106,7 +137,7 @@ export function ouvrirCircuit({ id = null, typeId = null, surCreation = null, ex
       const ajouter = () => {
         const titre = champTitre.value.trim();
         if (!titre) return;
-        brouillon.push({ id: null, titre, series: null, repetitions: null, dureeSec: null, reposSec: null, detail: '' });
+        brouillon.push({ id: null, titre, series: null, repetitions: null, dureeSec: null, reposSec: null, detail: '', lien: '' });
         champTitre.value = '';
         dessiner(brouillon.length - 1);
       };
@@ -130,7 +161,19 @@ export function ouvrirCircuit({ id = null, typeId = null, surCreation = null, ex
               return;
             }
             ajouter(); // un exercice tapé mais pas encore « ajouté » ne se perd pas
-            const valeurs = { nom: nom.value, typeId: type.value || null, note: note.value };
+            // Un lien qui n'est pas une adresse web : on le dit, on n'enregistre pas en silence autre chose.
+            if (lienCircuit.value.trim() && !normaliserLien(lienCircuit.value)) {
+              lienCircuit.classList.add('champ-erreur');
+              lienCircuit.focus();
+              notifier('Le lien du circuit doit être une adresse web (https://…).');
+              return;
+            }
+            const mauvais = brouillon.find((x) => String(x.lien || '').trim() && !normaliserLien(x.lien));
+            if (mauvais) {
+              notifier(`Le lien de « ${mauvais.titre} » doit être une adresse web (https://…).`);
+              return;
+            }
+            const valeurs = { nom: nom.value, typeId: type.value || null, note: note.value, lien: lienCircuit.value };
             let cree = null;
             store.modifier((d) => {
               if (existant) {
@@ -151,6 +194,7 @@ export function ouvrirCircuit({ id = null, typeId = null, surCreation = null, ex
         nom,
         h('div', { class: 'rangee-champ champ-large' }, h('label', { class: 'etiquette', for: 'circ-type' }, 'Catégorie de sport'), type),
         note,
+        lienCircuit,
         h('h3', null, 'Les exercices, dans l’ordre'),
         liste,
         h('div', { class: 'rangee' }, champTitre, h('button', { class: 'bouton bouton-petit', type: 'button', onclick: ajouter }, '＋ Exercice')),
@@ -226,7 +270,7 @@ export function ouvrirAjoutExercice({ titre = '', circuitId = null, surEnregistr
         );
       }
 
-      const exercice = { titre, series: null, repetitions: null, dureeSec: null, reposSec: null, detail: '' };
+      const exercice = { titre, series: null, repetitions: null, dureeSec: null, reposSec: null, detail: '', lien: '' };
       const choix = h(
         'select',
         { class: 'champ', id: 'ajout-circuit', 'aria-label': 'Circuit' },
@@ -246,6 +290,18 @@ export function ouvrirAjoutExercice({ titre = '', circuitId = null, surEnregistr
         exercice.titre = champTitre.value;
         champTitre.classList.remove('champ-erreur');
       });
+      const champLien = h('input', {
+        type: 'text',
+        class: 'champ',
+        maxLength: 300,
+        inputmode: 'url',
+        placeholder: 'Lien d’une vidéo (facultatif)',
+        'aria-label': 'Lien vidéo',
+        oninput: (ev) => {
+          exercice.lien = ev.target.value;
+          ev.target.classList.remove('champ-erreur');
+        },
+      });
       const remarque = h('input', {
         type: 'text',
         class: 'champ',
@@ -264,6 +320,12 @@ export function ouvrirAjoutExercice({ titre = '', circuitId = null, surEnregistr
             if (!exercice.titre.trim()) {
               champTitre.classList.add('champ-erreur');
               champTitre.focus();
+              return;
+            }
+            if (exercice.lien.trim() && !normaliserLien(exercice.lien)) {
+              champLien.classList.add('champ-erreur');
+              champLien.focus();
+              notifier('Le lien doit être une adresse web (https://…).');
               return;
             }
             let ajoute = null;
@@ -286,6 +348,7 @@ export function ouvrirAjoutExercice({ titre = '', circuitId = null, surEnregistr
           nombre(exercice, 'reposSec', 'Repos (s)', 3600)
         ),
         remarque,
+        champLien,
         h('p', { class: 'doux' }, 'Il est ajouté à la fin du circuit. Tout est facultatif sauf le nom : tu pourras le modifier ensuite en ouvrant le circuit.'),
         h(
           'div',
@@ -313,6 +376,7 @@ export function faireCircuit({ id, surTermine = null }) {
     const suivant = circuit.exercices.find((e) => !faits.has(e.id));
     zone.replaceChildren(
       circuit.note && h('p', { class: 'doux' }, circuit.note),
+      circuit.lien && h('p', null, h('a', { class: 'lien-video', href: circuit.lien, target: '_blank', rel: 'noopener noreferrer' }, '▶ Voir la vidéo du circuit')),
       circuit.exercices.length === 0
         ? h('p', { class: 'vide' }, 'Ce circuit n’a pas encore d’exercice : ajoute-en en le modifiant.')
         : h(
@@ -339,7 +403,8 @@ export function faireCircuit({ id, surTermine = null }) {
                   }),
                   h('span', { class: 'ligne-titre' }, e.titre)
                 ),
-                S.resumeExercice(e) && h('span', { class: 'meta mono' }, S.resumeExercice(e))
+                S.resumeExercice(e) && h('span', { class: 'meta mono' }, S.resumeExercice(e)),
+                e.lien && h('a', { class: 'lien-video', href: e.lien, target: '_blank', rel: 'noopener noreferrer' }, '▶ Voir la vidéo')
               )
             )
           ),
