@@ -2,7 +2,7 @@
 // pour qu'il s'ouvre sans Wi-Fi, ordinateur éteint. (Modèle : `construire-site.js` y met la liste des fichiers.)
 // Ce fichier ne touche jamais à tes données : elles sont rangées à part, dans l'appareil.
 
-const VERSION = 'dashboard-7a34b06865';
+const VERSION = 'dashboard-8a725df84d';
 const FICHIERS = [
   "./",
   "./css/style.css",
@@ -46,11 +46,13 @@ const FICHIERS = [
   "./js/modules/chiffrement.js",
   "./js/modules/composants-onglets.js",
   "./js/modules/corps.js",
+  "./js/modules/cours-format.js",
   "./js/modules/depot-github.js",
   "./js/modules/domaine.js",
   "./js/modules/echeances-donnees.js",
   "./js/modules/epargne-donnees.js",
   "./js/modules/etudes-composants.js",
+  "./js/modules/etudes-cours.js",
   "./js/modules/etudes-donnees.js",
   "./js/modules/etudes-minuteur.js",
   "./js/modules/etudes-parcours.js",

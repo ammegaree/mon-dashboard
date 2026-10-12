@@ -138,6 +138,19 @@ const SOURCES = [
       }),
   },
   {
+    type: 'cours',
+    groupe: 'Cours écrits',
+    icone: '📖',
+    elements: (d) =>
+      d.etudes.chapitres
+        .filter((c) => c.cours && c.cours.trim())
+        .map((c) => {
+          const m = d.etudes.modules.find((x) => x.id === c.moduleId);
+          const brut = c.cours.replace(/\*\*|==/g, ''); // les marques de mise en forme n'apparaissent pas dans les extraits
+          return { id: c.id, titre: c.titre, details: [brut], corps: brut, sous: m?.titre ? `cours écrit · ${m.titre}` : 'cours écrit' };
+        }),
+  },
+  {
     type: 'qcm',
     groupe: 'QCM',
     icone: '📝',

@@ -321,7 +321,7 @@ export function faireCircuit({ id, surTermine = null }) {
             circuit.exercices.map((e) =>
               h(
                 'li',
-                { class: 'ligne' + (faits.has(e.id) ? ' fait' : '') + (suivant?.id === e.id ? ' ligne-tache-maison a-faire' : '') },
+                { class: 'ligne ligne-exercice' + (faits.has(e.id) ? ' fait' : '') + (suivant?.id === e.id ? ' ligne-tache-maison a-faire' : '') },
                 h(
                   'label',
                   { class: 'case' },

@@ -12,7 +12,7 @@ import { ouvrirIdee } from './ui-carnet.js';
 import { ouvrirEcheance } from './ui-echeances.js';
 import { ouvrirFiche } from './ui-fiches.js';
 import { ouvrirNote } from './etudes-recherche.js';
-import { ouvrirOngletEtudes } from './etudes.js';
+import { ouvrirOngletEtudes, ouvrirCoursEtudes } from './etudes.js';
 import { ouvrirTacheMaison } from './ui-maison.js';
 import { ouvrirPlante } from './ui-plantes.js';
 import { ouvrirProjet } from './ui-projets.js';
@@ -42,6 +42,10 @@ const ACTIONS = {
   note: (r) => ouvrirNote({ id: r.id }),
   chapitre: () => {
     ouvrirOngletEtudes('parcours');
+    versRoute('domaine/etudes');
+  },
+  cours: (r) => {
+    ouvrirCoursEtudes(r.id);
     versRoute('domaine/etudes');
   },
   qcm: () => {

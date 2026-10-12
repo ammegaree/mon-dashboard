@@ -69,10 +69,12 @@ function ouvrirModule(id = null) {
               class: 'bouton',
               type: 'button',
               onclick: async () => {
-                const n = E.chapitresDuModule(store.lire(), module.id).length;
+                const chapitres = E.chapitresDuModule(store.lire(), module.id);
+                const n = chapitres.length;
+                const nbCours = chapitres.filter((c) => c.cours).length;
                 const ok = await confirmer({
                   titre: 'Supprimer ce module ?',
-                  message: `« ${module.titre} » et ses ${n} chapitre${n > 1 ? 's' : ''} seront retirés du parcours. Ton temps de concentration et tes QCM déjà enregistrés sont conservés.`,
+                  message: `« ${module.titre} » et ses ${n} chapitre${n > 1 ? 's' : ''} seront retirés du parcours${nbCours ? `, avec ${nbCours > 1 ? `les ${nbCours} cours que tu y as écrits` : 'le cours que tu y as écrit'}` : ''}. Ton temps de concentration et tes QCM déjà enregistrés sont conservés.`,
                   oui: 'Supprimer',
                   non: 'Garder',
                 });
@@ -158,6 +160,7 @@ function ouvrirChapitre(id, ctx) {
           { class: 'rangee rangee-souple' },
           h('button', { class: 'bouton bouton-petit', type: 'button', onclick: () => { fermer(); ctx.aller('minuteur', { chapitreId: id }); } }, '⏱ Travailler dessus'),
           h('button', { class: 'bouton bouton-petit', type: 'button', onclick: () => { fermer(); ouvrirSession({ chapitreId: id }); } }, '🗓 Planifier'),
+          h('button', { class: 'bouton bouton-petit bouton-turquoise', type: 'button', onclick: () => { fermer(); ctx.aller('cours', { chapitreId: id }); } }, chapitre.cours ? '📖 Mon cours ✓' : '📖 Écrire mon cours'),
           h('button', { class: 'bouton bouton-petit', type: 'button', onclick: () => { fermer(); ctx.aller('qcm', { chapitreId: id }); } }, nbQcm ? `📝 QCM (${nbQcm})` : '📝 QCM'),
           h('button', { class: 'bouton bouton-petit', type: 'button', onclick: () => { fermer(); ctx.aller('recherche', { chapitreId: id }); } }, nbNotes ? `🔎 Mes notes (${nbNotes})` : '🔎 Mes notes')
         ),
@@ -174,7 +177,7 @@ function ouvrirChapitre(id, ctx) {
               onclick: async () => {
                 const ok = await confirmer({
                   titre: 'Supprimer ce chapitre ?',
-                  message: `« ${chapitre.titre} » sera retiré du parcours (ainsi que ses sessions planifiées). Ton temps de concentration et tes QCM déjà enregistrés sont conservés.`,
+                  message: `« ${chapitre.titre} » sera retiré du parcours (ainsi que ses sessions planifiées${chapitre.cours ? ' et le cours que tu y as écrit' : ''}). Ton temps de concentration et tes QCM déjà enregistrés sont conservés.`,
                   oui: 'Supprimer',
                   non: 'Garder',
                 });
@@ -306,6 +309,8 @@ function ligneChapitre(c, donnees, ctx, nbQcm) {
     { class: 'ligne ligne-chapitre' },
     selectStatut(c),
     h('button', { class: 'titre-cliquable ligne-titre ligne-bloc', type: 'button', title: 'Ouvrir ce chapitre', onclick: () => ouvrirChapitre(c.id, ctx) }, c.titre),
+    c.cours &&
+      h('button', { class: 'bouton-icone', type: 'button', title: 'Ouvrir mon cours', 'aria-label': `Ouvrir mon cours « ${c.titre} »`, onclick: () => ctx.aller('cours', { chapitreId: c.id }) }, '📖'),
     (nbQcm > 0 || nbNotes > 0) &&
       h(
         'span',

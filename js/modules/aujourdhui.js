@@ -1,8 +1,8 @@
-// Page « Aujourd'hui » : l'accueil, volontairement simple.
-// La date, une fine barre de progression, les choses du jour rangées par catégorie,
-// et en bas les routines et les reports, repliés.
+// Page « Aujourd'hui » : l'accueil.
+// Un bloc d'accueil (salutation, où j'en suis, mes priorités, la phrase du jour), une seule liste
+// « À faire » rangée par catégorie, les rendez-vous en agenda, et sur le côté les routines et les reports.
 
-import { h, vider, pastilles, etincelles, confettis } from '../ui.js';
+import { h, vider, etincelles, confettis } from '../ui.js';
 import * as store from '../store.js';
 import { enregistrerPage, elementsDuJour, cleCoche, estCoche, elementsEnRetard, reporterElement, abandonnerElement } from '../registry.js';
 import { aujourdhui, ajouterJours, formatLong, formatCourt, nomDuJour, jourSemaine } from '../dates.js';
@@ -46,22 +46,92 @@ function cocher(item, { restants, total }) {
 
 // ---- Morceaux de page ----
 
-function progression({ total, faits }) {
+// Le moment de la journée : une salutation, un petit dessin et une couleur.
+function momentDeLaJournee(maintenant = new Date()) {
+  const heure = maintenant.getHours();
+  if (heure >= 5 && heure < 12) return { salut: 'Bonjour', emoji: '☀️', couleur: 'jaune' };
+  if (heure >= 12 && heure < 18) return { salut: 'Bon après-midi', emoji: '🌤️', couleur: 'orange' };
+  return { salut: 'Bonsoir', emoji: '🌙', couleur: 'violet' };
+}
+
+const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
+
+// « 3 choses à faire · 2 rendez-vous · prochain à 14:30 »
+function phraseResume({ restants, total, rdv, estAujourdhui, maintenant = new Date() }) {
+  if (total === 0 && rdv.length === 0) return 'Rien de prévu : savoure le calme ✦';
+  const morceaux = [];
+  if (total > 0) morceaux.push(restants === 0 ? 'Tout est fait ✨' : pluriel(restants, 'chose à faire', 'choses à faire'));
+  if (rdv.length > 0) morceaux.push(pluriel(rdv.length, 'rendez-vous', 'rendez-vous'));
+  if (estAujourdhui) {
+    const hhmm = `${String(maintenant.getHours()).padStart(2, '0')}:${String(maintenant.getMinutes()).padStart(2, '0')}`;
+    const prochain = rdv.find((r) => r.heure && r.heure >= hhmm);
+    if (prochain) morceaux.push(`prochain à ${prochain.heure}`);
+  }
+  return morceaux.join(' · ');
+}
+
+// Le bloc du haut : la date, la salutation, où j'en suis, les priorités, la phrase du jour.
+function hero({ date, reel, estAujourdhui, total, faits, restants, rdv, priorites, phrase, redessiner }) {
+  const moment = momentDeLaJournee();
   const pourcent = total ? Math.round((faits / total) * 100) : 0;
   const termine = total > 0 && faits === total;
-  let texte;
-  if (total === 0) texte = 'Rien de prévu';
-  else if (termine) texte = 'Journée terminée ✨';
-  else texte = `${faits} sur ${total}`;
+  const titre = estAujourdhui ? `${moment.salut} ✦` : libelleJour(date, reel);
+  const visibles = priorites.slice(0, 3);
+
   return h(
-    'div',
-    { class: 'progression-fine' + (termine ? ' complete' : '') },
+    'header',
+    { class: 'hero-jour' + (termine ? ' complete' : ''), style: `--moment: var(--${termine ? 'turquoise' : estAujourdhui ? moment.couleur : 'ciel'})` },
     h(
       'div',
-      { class: 'barre-progression', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pourcent, 'aria-label': 'Progression de la journée' },
-      h('div', { class: 'remplissage', style: `width: ${pourcent}%` })
+      { class: 'hero-haut' },
+      h('span', { class: 'hero-emoji', 'aria-hidden': 'true' }, estAujourdhui ? moment.emoji : '🗓️'),
+      h(
+        'div',
+        { class: 'hero-texte' },
+        h('p', { class: 'hero-date mono' }, formatLong(date)),
+        h('h1', null, titre),
+        h('p', { class: 'hero-resume' }, phraseResume({ restants, total, rdv, estAujourdhui }))
+      ),
+      h(
+        'nav',
+        { class: 'hero-nav', 'aria-label': 'Changer de jour' },
+        !estAujourdhui && h('button', { class: 'bouton bouton-petit', type: 'button', onclick: () => { dateVue = null; redessiner(); } }, "Aujourd'hui"),
+        h(
+          'div',
+          { class: 'hero-nav-fleches' },
+          h('button', { class: 'bouton-icone', type: 'button', 'aria-label': 'Jour précédent', onclick: () => { dateVue = ajouterJours(date, -1); redessiner(); } }, '◀'),
+          h('button', { class: 'bouton-icone', type: 'button', 'aria-label': 'Jour suivant', onclick: () => { dateVue = ajouterJours(date, 1); redessiner(); } }, '▶')
+        )
+      )
     ),
-    h('span', { class: 'progression-texte mono' }, texte)
+    total > 0 &&
+      h(
+        'div',
+        { class: 'hero-progression' },
+        h(
+          'div',
+          { class: 'barre-progression', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pourcent, 'aria-label': 'Progression de la journée' },
+          h('div', { class: 'remplissage', style: `width: ${pourcent}%` })
+        ),
+        h('span', { class: 'progression-texte mono' }, termine ? 'Journée terminée ✨' : `${faits} / ${total}`)
+      ),
+    visibles.length > 0 &&
+      h(
+        'div',
+        { class: 'hero-priorites', 'aria-label': 'Mes priorités de la semaine' },
+        h('span', { class: 'etiquette' }, '🎯 Mes priorités'),
+        visibles.map((p) => h('span', { class: 'priorite-puce' }, p)),
+        priorites.length > 3 && h('a', { class: 'meta', href: '#/bilan' }, `+ ${priorites.length - 3}`)
+      ),
+    phrase &&
+      h(
+        'p',
+        { class: 'hero-phrase' },
+        h('span', { 'aria-hidden': 'true' }, '✦ '),
+        phrase.texte,
+        phrase.auteur && h('span', { class: 'meta' }, ` — ${phrase.auteur}`),
+        phrase.type === 'pourquoi' && h('span', { class: 'meta' }, ' — mon pourquoi')
+      )
   );
 }
 
@@ -91,44 +161,45 @@ function encartPreparation() {
   );
 }
 
-// Les priorités choisies lors du bilan, pendant la semaine qui suit.
-function encartPriorites(priorites) {
-  const visibles = priorites.slice(0, 3);
-  return h(
-    'aside',
-    { class: 'encart-priorites', 'aria-label': 'Mes priorités de la semaine' },
-    h('strong', null, '🎯 Mes priorités de la semaine'),
-    h('ul', null, visibles.map((p) => h('li', null, p)), priorites.length > 3 && h('li', { class: 'meta' }, `+ ${priorites.length - 3} autre${priorites.length - 3 > 1 ? 's' : ''} dans ton bilan`))
-  );
-}
-
-// L'encart motivation : une phrase par jour, discrète.
-function encartMotivation(phrase) {
-  return h(
-    'aside',
-    { class: 'encart-motivation', 'aria-label': 'Ma phrase du jour' },
-    h('span', { class: 'encart-etoile', 'aria-hidden': 'true' }, '✦'),
-    h('p', { class: 'encart-texte' }, phrase.texte),
-    phrase.auteur && h('span', { class: 'encart-auteur mono' }, `— ${phrase.auteur}`),
-    phrase.type === 'pourquoi' && h('span', { class: 'encart-auteur mono' }, '— mon pourquoi')
-  );
-}
-
-function rendezVous(rdv, donnees) {
-  return h('ul', { class: 'liste-rdv', 'aria-label': 'Rendez-vous du jour' }, rdv.map((r) => ligneRendezVous(r, donnees)));
-}
-
-function carteCategorie(cat, items, infos, donnees, contexte) {
-  const faits = items.filter((i) => estCoche(donnees, i)).length;
+// Les rendez-vous du jour, comme un petit agenda.
+function panneauAgenda(rdv, donnees) {
   return h(
     'section',
-    { class: 'fenetre carte-categorie', style: `--cat: var(--${cat.couleur})` },
-    h('div', { class: 'fenetre-barre' }, pastilles(), h('h2', { class: 'fenetre-titre' }, `${cat.icone} ${cat.nom}`), items.length > 0 && h('span', { class: 'mono' }, `${faits}/${items.length}`)),
+    { class: 'panneau-jour panneau-agenda', 'aria-label': 'Rendez-vous du jour' },
+    h('h2', { class: 'panneau-titre' }, h('span', { 'aria-hidden': 'true' }, '🗓 '), 'Rendez-vous', h('span', { class: 'panneau-compte mono' }, String(rdv.length))),
+    h('ul', { class: 'liste-rdv' }, rdv.map((r) => ligneRendezVous(r, donnees)))
+  );
+}
+
+// Tout ce qui est à faire, par catégorie : un seul panneau, des lignes légères.
+function panneauTaches(groupes, donnees, contexte, restants) {
+  return h(
+    'section',
+    { class: 'panneau-jour panneau-taches', 'aria-label': 'Ce qu’il y a à faire' },
+    h('h2', { class: 'panneau-titre' }, h('span', { 'aria-hidden': 'true' }, '✅ '), 'À faire', contexte.total > 0 && h('span', { class: 'panneau-compte mono' }, restants === 0 ? 'tout est fait' : `${restants} à faire`)),
     h(
-      'ul',
-      { class: 'fenetre-corps liste' },
-      items.map((i) => ligneTache(i, donnees, { surCoche: (it) => cocher(it, contexte) })),
-      infos.map((i) => ligneInfo(i))
+      'div',
+      { class: 'groupes-jour' },
+      groupes.map(({ cat, items, infos }) => {
+        const faits = items.filter((i) => estCoche(donnees, i)).length;
+        return h(
+          'section',
+          { class: 'groupe-jour', style: `--cat: var(--${cat.couleur})` },
+          h(
+            'h3',
+            { class: 'groupe-entete' },
+            h('span', { class: 'pastille-cat', 'aria-hidden': 'true' }),
+            h('span', { class: 'groupe-nom' }, `${cat.icone} ${cat.nom}`),
+            items.length > 0 && h('span', { class: 'mono groupe-compte' }, `${faits}/${items.length}`)
+          ),
+          h(
+            'ul',
+            { class: 'liste' },
+            items.map((i) => ligneTache(i, donnees, { surCoche: (it) => cocher(it, contexte) })),
+            infos.map((i) => ligneInfo(i))
+          )
+        );
+      })
     )
   );
 }
@@ -197,7 +268,8 @@ function editeurRoutine(routine) {
   return { liste, champAjout, ajouter, lireBrouillon: () => brouillon };
 }
 
-function blocRoutine(routine, donnees, elements, contexte, redessiner) {
+// Le contenu d'une routine (étapes à cocher, ou éditeur d'étapes).
+function contenuRoutine(routine, donnees, elements, contexte, redessiner) {
   const items = elements.filter((e) => e.groupe === `routine:${routine.id}`);
   const faits = items.filter((i) => estCoche(donnees, i)).length;
   const enEdition = routineEnEdition === routine.id;
@@ -249,6 +321,12 @@ function blocRoutine(routine, donnees, elements, contexte, redessiner) {
     );
   }
 
+  return { corps, items, faits, enEdition, cle };
+}
+
+// Une routine rangée sur le côté : un bloc qui se replie.
+function blocRoutine(routine, donnees, elements, contexte, redessiner) {
+  const { corps, items, faits, enEdition, cle } = contenuRoutine(routine, donnees, elements, contexte, redessiner);
   return blocRepliable({
     cle,
     couleur: 'creme-fonce',
@@ -257,6 +335,60 @@ function blocRoutine(routine, donnees, elements, contexte, redessiner) {
     corps,
     forcerOuvert: enEdition,
   });
+}
+
+// La routine du moment (matin avant midi, soir après 18 h) : bien en vue, en haut de la page.
+// Une fois toutes les étapes faites, elle se réduit à une ligne.
+function rituelDuMoment(routine, donnees, elements, contexte, redessiner, couleur = 'jaune') {
+  const { corps, items, faits, enEdition, cle } = contenuRoutine(routine, donnees, elements, contexte, redessiner);
+  const fini = items.length > 0 && faits === items.length && !enEdition;
+  if (fini) {
+    return blocRepliable({ cle, couleur: 'turquoise', titre: `✅ ${routine.nom} : faite ✨`, compteur: `${faits}/${items.length}`, corps });
+  }
+  const pourcent = items.length ? Math.round((faits / items.length) * 100) : 0;
+  return h(
+    'section',
+    { class: 'panneau-jour panneau-rituel', 'aria-label': routine.nom, style: `--moment-rituel: var(--${couleur})` },
+    h(
+      'h2',
+      { class: 'panneau-titre' },
+      h('span', { 'aria-hidden': 'true' }, `${routine.icone} `),
+      routine.nom,
+      items.length > 0 && h('span', { class: 'panneau-compte mono' }, `${faits}/${items.length}`)
+    ),
+    items.length > 0 &&
+      h(
+        'div',
+        { class: 'barre-progression rituel-barre', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pourcent, 'aria-label': `Progression : ${routine.nom}` },
+        h('div', { class: 'remplissage', style: `width: ${pourcent}%` })
+      ),
+    corps
+  );
+}
+
+// Une étape de la journée (matin, ma journée, soir) : un titre qui sépare nettement, puis son contenu.
+function phaseDuJour({ id, emoji, titre, couleur, maintenant, contenu }) {
+  return h(
+    'section',
+    { class: 'phase-jour' + (maintenant ? ' maintenant' : ''), style: `--phase: var(--${couleur})`, 'aria-labelledby': `phase-${id}` },
+    h(
+      'header',
+      { class: 'phase-entete' },
+      h('span', { class: 'phase-emoji', 'aria-hidden': 'true' }, emoji),
+      h('h2', { id: `phase-${id}`, class: 'phase-titre mono' }, titre),
+      maintenant && h('span', { class: 'phase-badge mono' }, 'en ce moment'),
+      h('span', { class: 'phase-trait', 'aria-hidden': 'true' })
+    ),
+    h('div', { class: 'phase-contenu' }, contenu)
+  );
+}
+
+// Quelle étape de la journée est en cours ? matin avant midi, soir à partir de 18 h.
+function phaseEnCours(maintenant = new Date()) {
+  const heure = maintenant.getHours();
+  if (heure >= 5 && heure < 12) return 'matin';
+  if (heure >= 18) return 'soir';
+  return 'journee';
 }
 
 function blocReport(enRetard, donnees, reel) {
@@ -317,50 +449,67 @@ function rendre(racine, { redessiner }) {
   };
   for (const item of acocher.filter((e) => !e.groupe)) range(item, 'items');
   for (const item of elements.filter((e) => e.type === 'info' && !e.groupe)) range(item, 'infos');
-  const cartes = toutesLesCategories(donnees)
+  const groupes = toutesLesCategories(donnees)
     .filter((c) => parCategorie.has(c.id))
-    .map((c) => carteCategorie(c, parCategorie.get(c.id).items, parCategorie.get(c.id).infos, donnees, contexte));
+    .map((c) => ({ cat: c, items: parCategorie.get(c.id).items, infos: parCategorie.get(c.id).infos }));
 
   const enRetard = estAujourdhui ? elementsEnRetard(donnees, reel) : [];
-  const blocsBas = [
-    ...donnees.routines.map((r) => blocRoutine(r, donnees, elements, contexte, redessiner)),
+  const priorites = prioritesDeLaSemaine(donnees, date);
+  const phrase = phraseDuJour(donnees, date);
+  const aucuneChose = groupes.length === 0 && rdv.length === 0;
+  const seulementRoutines = aucuneChose && acocher.length > 0;
+
+  // Une journée en trois temps : le matin, la journée, le soir. Les autres routines passent après le soir.
+  const routineMatin = donnees.routines.find((r) => r.id === 'matin') || null;
+  const routineSoir = donnees.routines.find((r) => r.id === 'soir') || null;
+  const autresRoutines = donnees.routines.filter((r) => r !== routineMatin && r !== routineSoir);
+  const enCours = estAujourdhui ? phaseEnCours() : null;
+
+  const contenuJournee = [
     enRetard.length > 0 && blocReport(enRetard, donnees, reel),
+    rdv.length > 0 && panneauAgenda(rdv, donnees),
+    groupes.length > 0 && panneauTaches(groupes, donnees, contexte, contexte.restants),
+    aucuneChose &&
+      h(
+        'div',
+        { class: 'vide vide-grand' },
+        h('p', null, seulementRoutines ? 'Rien d’autre que tes routines pour ce jour.' : "Rien de prévu pour l'instant."),
+        h('p', { class: 'doux' }, 'Ajoute une petite chose avec « ＋ Ajouter », ou savoure le calme ✦')
+      ),
   ];
 
   const page = h(
     'div',
     { class: 'page page-aujourdhui' },
-    h(
-      'header',
-      { class: 'entete-page' },
-      h('div', null, h('h1', null, libelleJour(date, reel)), h('p', { class: 'sous-titre mono' }, formatLong(date))),
-      h(
-        'nav',
-        { class: 'rangee', 'aria-label': 'Changer de jour' },
-        h('button', { class: 'bouton bouton-icone-grand', type: 'button', 'aria-label': 'Jour précédent', onclick: () => { dateVue = ajouterJours(date, -1); redessiner(); } }, '◀'),
-        !estAujourdhui && h('button', { class: 'bouton', type: 'button', onclick: () => { dateVue = null; redessiner(); } }, "Aujourd'hui"),
-        h('button', { class: 'bouton bouton-icone-grand', type: 'button', 'aria-label': 'Jour suivant', onclick: () => { dateVue = ajouterJours(date, 1); redessiner(); } }, '▶')
-      )
-    ),
+    hero({ date, reel, estAujourdhui, total: acocher.length, faits, restants: contexte.restants, rdv, priorites, phrase, redessiner }),
     estAujourdhui && bilanEnAttente(donnees, reel) && encartBilan(jourSemaine(reel) === 0),
     // Un seul encart à la fois : la préparation vient après le bilan.
     estAujourdhui && !bilanEnAttente(donnees, reel) && preparationEnAttente(donnees, reel) && encartPreparation(),
-    prioritesDeLaSemaine(donnees, date).length > 0 && encartPriorites(prioritesDeLaSemaine(donnees, date)),
-    phraseDuJour(donnees, date) && encartMotivation(phraseDuJour(donnees, date)),
     h(
       'div',
-      { class: 'barre-actions' },
-      progression({ total: acocher.length, faits }),
-      estAujourdhui && !checkinDuJour(donnees, reel) && h('button', { class: 'bouton', type: 'button', onclick: () => ouvrirCheckin({ date: reel }) }, '🌤️ Mon check-in'),
+      { class: 'actions-jour' },
+      h('button', { class: 'bouton bouton-jaune', type: 'button', onclick: () => ouvrirAjoutTache({ date }) }, '＋ Ajouter'),
       h('button', { class: 'bouton', type: 'button', title: 'Vider ma tête', onclick: () => ouvrirBrainDump({}) }, '🧠 Brain dump'),
-      h('button', { class: 'bouton bouton-jaune', type: 'button', onclick: () => ouvrirAjoutTache({ date }) }, '＋ Ajouter')
+      estAujourdhui && !checkinDuJour(donnees, reel) && h('button', { class: 'bouton', type: 'button', onclick: () => ouvrirCheckin({ date: reel }) }, '🌤️ Check-in')
     ),
-    rdv.length > 0 && rendezVous(rdv, donnees),
-    cartes.length > 0 && h('div', { class: 'grille-cartes' }, cartes),
-    cartes.length === 0 &&
-      rdv.length === 0 &&
-      h('p', { class: 'vide vide-grand' }, "Rien de prévu pour l'instant. Ajoute une petite chose avec « ＋ Ajouter », ou savoure le calme ✦"),
-    h('div', { class: 'grille-bas' }, blocsBas),
+    h(
+      'div',
+      { class: 'jour-temps' },
+      routineMatin &&
+        phaseDuJour({ id: 'matin', emoji: '🌅', titre: 'Le matin', couleur: 'jaune', maintenant: enCours === 'matin', contenu: rituelDuMoment(routineMatin, donnees, elements, contexte, redessiner, 'jaune') }),
+      phaseDuJour({ id: 'journee', emoji: '☀️', titre: 'Ma journée', couleur: 'turquoise', maintenant: enCours === 'journee', contenu: contenuJournee }),
+      routineSoir &&
+        phaseDuJour({ id: 'soir', emoji: '🌙', titre: 'Le soir', couleur: 'violet', maintenant: enCours === 'soir', contenu: rituelDuMoment(routineSoir, donnees, elements, contexte, redessiner, 'violet') }),
+      autresRoutines.length > 0 &&
+        phaseDuJour({
+          id: 'autres',
+          emoji: '🔁',
+          titre: 'Mes autres routines',
+          couleur: 'creme-fonce',
+          maintenant: false,
+          contenu: h('div', { class: 'grille-bas' }, autresRoutines.map((r) => blocRoutine(r, donnees, elements, contexte, redessiner))),
+        })
+    ),
     h('p', { class: 'lien-discret' }, h('button', { class: 'lien-bouton', type: 'button', onclick: ouvrirRecurrentes }, '↻ Gérer mes tâches qui reviennent'))
   );
 

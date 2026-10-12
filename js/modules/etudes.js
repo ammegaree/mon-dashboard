@@ -1,4 +1,4 @@
-// Page du domaine « Études » : cinq onglets (Parcours, Minuteur, QCM, Recherche perso, Suivi).
+// Page du domaine « Études » : Vue d'ensemble, Parcours, Cours, Minuteur, QCM, Recherche perso, Suivi.
 // Elle remplace la page générique des domaines pour la catégorie « etudes ».
 
 import { h, vider } from '../ui.js';
@@ -6,6 +6,7 @@ import { enregistrerPageDomaine } from '../registry.js';
 import * as store from '../store.js';
 import { progression } from './etudes-donnees.js';
 import { rendreParcours } from './etudes-parcours.js';
+import { rendreCours } from './etudes-cours.js';
 import { rendreMinuteur } from './etudes-minuteur.js';
 import { rendreQcm, reinitialiserVueQcm } from './etudes-qcm.js';
 import { rendreRecherche } from './etudes-recherche.js';
@@ -18,13 +19,14 @@ import { ouvrirBrainDump, libelleBrainDump } from './ui-carnet.js';
 const ONGLETS = [
   { id: 'ensemble', titre: "Vue d'ensemble", icone: '📚' },
   { id: 'parcours', titre: 'Parcours', icone: '🗺️' },
+  { id: 'cours', titre: 'Cours', icone: '📖' },
   { id: 'minuteur', titre: 'Minuteur', icone: '⏱️' },
   { id: 'qcm', titre: 'QCM', icone: '📝' },
   { id: 'recherche', titre: 'Recherche perso', icone: '🔎' },
   { id: 'suivi', titre: 'Suivi', icone: '📈' },
 ];
 
-const RENDUS = { ensemble: rendreVueEnsemble((donnees) => resumeEtudes(donnees)), parcours: rendreParcours, minuteur: rendreMinuteur, qcm: rendreQcm, recherche: rendreRecherche, suivi: rendreSuivi };
+const RENDUS = { ensemble: rendreVueEnsemble((donnees) => resumeEtudes(donnees)), parcours: rendreParcours, cours: rendreCours, minuteur: rendreMinuteur, qcm: rendreQcm, recherche: rendreRecherche, suivi: rendreSuivi };
 
 let onglet = 'ensemble';
 let parametresEnAttente = null; // paramètres à usage unique transmis à l'onglet qu'on ouvre
@@ -35,6 +37,13 @@ export function ouvrirOngletEtudes(id) {
     onglet = id;
     ongletImpose = true; // le lien du minuteur arrive sur son onglet, pas sur la vue d'ensemble
   }
+}
+
+// Ouvre le cours écrit d'un chapitre (depuis la recherche, par exemple) : l'onglet « Cours » arrive sur ce chapitre.
+export function ouvrirCoursEtudes(chapitreId) {
+  onglet = 'cours';
+  parametresEnAttente = { chapitreId };
+  ongletImpose = true;
 }
 
 let ongletImpose = false;

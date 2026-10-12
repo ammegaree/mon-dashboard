@@ -4181,3 +4181,523 @@ details.groupe-idees[open] > summary {
     align-content: start;
   }
 }
+
+/* ---- Études : le cours écrit pour un chapitre ---- */
+.outils-cours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.outil-gras {
+  font-weight: 800;
+}
+.champ-cours {
+  width: 100%;
+  min-height: 52vh;
+  padding: 14px 16px;
+  line-height: 1.6;
+  font-size: 1.02rem;
+  resize: vertical;
+}
+.cours-lecture {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 70ch;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.cours-lecture p,
+.cours-lecture ul,
+.cours-lecture ol,
+.cours-lecture h3,
+.cours-lecture h4 {
+  margin: 0;
+}
+.cours-titre {
+  margin-top: 10px;
+  padding-bottom: 4px;
+  font-size: 1.35rem;
+  border-bottom: 3px solid var(--encre);
+}
+.cours-sous-titre {
+  margin-top: 6px;
+  font-size: 1.1rem;
+  color: var(--violet-fonce, var(--encre));
+}
+.cours-liste {
+  padding-left: 1.4em;
+}
+.cours-liste li + li {
+  margin-top: 4px;
+}
+.cours-surligne {
+  padding: 0 3px;
+  color: inherit;
+  background: var(--jaune);
+  border-radius: 4px;
+}
+.cours-retenir {
+  padding: 10px 14px;
+  background: var(--creme);
+  border: 2.5px solid var(--encre);
+  border-left-width: 8px;
+  border-radius: 10px;
+}
+.cours-lecture a {
+  color: inherit;
+  text-decoration: underline;
+}
+@media (max-width: 860px) {
+  .champ-cours {
+    min-height: 46vh;
+    font-size: 16px;
+  }
+}
+@media (max-width: 860px) {
+  .outils-cours .bouton {
+    min-height: 44px;
+  }
+}
+
+/* ---------- Aujourd'hui : l'accueil retravaillé ---------- */
+
+.page-aujourdhui {
+  gap: 18px;
+}
+
+/* Le bloc du haut : salutation, où j'en suis, priorités, phrase du jour. */
+.hero-jour {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 30px 22px 18px;
+  background: var(--blanc);
+  border: var(--bord);
+  border-radius: 18px;
+  box-shadow: var(--ombre);
+  overflow: hidden;
+}
+.hero-jour::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 12px;
+  background: var(--moment, var(--jaune));
+  border-bottom: var(--bord);
+}
+.hero-haut {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+.hero-emoji {
+  flex: none;
+  display: grid;
+  place-content: center;
+  width: 62px;
+  height: 62px;
+  font-size: 1.9rem;
+  background: var(--moment, var(--jaune));
+  border: var(--bord);
+  border-radius: 50%;
+  box-shadow: var(--ombre-petite);
+}
+.hero-texte {
+  flex: 1;
+  min-width: 190px;
+}
+.hero-date {
+  margin: 0;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #3d3d3d;
+}
+.hero-jour h1 {
+  margin: 2px 0 4px;
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+  line-height: 1.1;
+}
+.hero-resume {
+  margin: 0;
+  font-weight: 600;
+}
+.hero-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  margin-left: auto;
+}
+.hero-progression {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hero-progression .barre-progression {
+  flex: 1;
+  height: 20px;
+}
+.hero-jour.complete .remplissage {
+  background: repeating-linear-gradient(-45deg, var(--jaune) 0 12px, #f2c92e 12px 24px);
+}
+.hero-priorites {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.priorite-puce {
+  padding: 3px 12px;
+  background: var(--creme);
+  border: 2.5px solid var(--encre);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.hero-phrase {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 2.5px dashed var(--encre);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* Les invitations (bilan, préparation) : une ligne, plus discrète. */
+.page-aujourdhui .encart-bilan {
+  box-shadow: none;
+  border-radius: 14px;
+}
+
+.actions-jour {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* La grille : le principal à gauche, les routines sur le côté (sous le principal sur petit écran). */
+.jour-grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+@media (min-width: 1100px) {
+  .jour-grille {
+    grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  }
+}
+.jour-principal,
+.jour-cote {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.jour-cote {
+  gap: 12px;
+}
+.jour-cote .grille-bas {
+  grid-template-columns: minmax(0, 1fr);
+}
+.jour-cote .grille-bas:empty {
+  display: none;
+}
+
+.panneau-jour {
+  padding: 4px 18px 14px;
+  background: var(--blanc);
+  border: var(--bord);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+}
+.panneau-titre {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 0 10px;
+  font-size: 1.1rem;
+  border-bottom: 2.5px solid var(--encre);
+}
+.panneau-compte {
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Les choses à faire : une liste par catégorie, des lignes légères. */
+.groupes-jour {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 14px;
+}
+.groupe-entete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 2px;
+  font-size: 0.95rem;
+}
+.groupe-nom {
+  flex: 1;
+}
+.groupe-compte {
+  font-size: 0.78rem;
+  color: #3d3d3d;
+}
+.panneau-taches .liste {
+  padding: 0;
+  gap: 0;
+}
+.panneau-taches .ligne,
+.panneau-agenda .rdv {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px dotted rgba(27, 27, 27, 0.3);
+  border-radius: 0;
+  box-shadow: none;
+}
+.panneau-taches .liste > li:last-child {
+  border-bottom: 0;
+}
+.panneau-taches .ligne {
+  padding: 5px 2px;
+  min-height: 48px;
+}
+.panneau-taches .ligne-info {
+  font-style: italic;
+  background: transparent;
+}
+.panneau-taches .case-boite {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  box-shadow: none;
+}
+.panneau-taches .case-boite:checked {
+  background: var(--cat, var(--jaune));
+}
+
+/* Les rendez-vous : l'heure, puis le titre, avec une barre de la couleur de la catégorie. */
+.panneau-agenda .liste-rdv {
+  padding: 0;
+  gap: 0;
+}
+.panneau-agenda .rdv {
+  padding: 10px 4px 10px 14px;
+  box-shadow: inset 6px 0 0 var(--cat, var(--jaune));
+}
+.panneau-agenda .liste-rdv > li:last-child {
+  border-bottom: 0;
+}
+.panneau-agenda .rdv-heure {
+  min-width: 52px;
+  padding: 0;
+  text-align: left;
+  font-size: 1.05rem;
+  background: transparent;
+  border: 0;
+}
+
+@media (max-width: 860px) {
+  .hero-jour {
+    padding: 28px 16px 16px;
+  }
+  .hero-emoji {
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
+  }
+  .actions-jour .bouton {
+    flex: 1 1 auto;
+  }
+  .panneau-jour {
+    padding: 2px 14px 12px;
+  }
+}
+
+/* Aujourd'hui, petits écrans : le bloc du haut tient sur peu de place. */
+@media (max-width: 860px) {
+  .hero-haut {
+    flex-wrap: nowrap;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .hero-texte {
+    min-width: 0;
+  }
+  .hero-nav .bouton-icone {
+    width: 40px;
+    height: 40px;
+    min-height: 0;
+    padding: 0;
+  }
+  .hero-nav .bouton-petit {
+    min-height: 40px;
+  }
+  .hero-nav {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .hero-nav-fleches {
+    display: flex;
+    gap: 6px;
+  }
+  .actions-jour {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .actions-jour .bouton:first-child:nth-last-child(3) {
+    grid-column: 1 / -1;
+  }
+  .page-aujourdhui .encart-bilan .encart-texte {
+    font-size: 0.95rem;
+  }
+}
+.hero-nav-fleches {
+  display: flex;
+  gap: 8px;
+}
+
+/* Les routines et les reports, sur le côté : mêmes lignes légères que les choses à faire. */
+.jour-cote .repliable .ligne {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px dotted rgba(27, 27, 27, 0.3);
+  border-radius: 0;
+  box-shadow: none;
+}
+.jour-cote .repliable .liste > li:last-child {
+  border-bottom: 0;
+}
+.jour-cote .repliable .case-boite {
+  border-radius: 50%;
+  box-shadow: none;
+}
+
+/* La routine du moment, en haut de la page. */
+.panneau-rituel {
+  background: var(--blanc);
+  border-left-width: 10px;
+  border-left-color: var(--moment-rituel, var(--jaune));
+}
+.panneau-rituel .rituel-barre {
+  height: 14px;
+  margin: 12px 0 4px;
+}
+.panneau-rituel .liste {
+  padding: 4px 0 0;
+  gap: 0;
+}
+.panneau-rituel .ligne {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px dotted rgba(27, 27, 27, 0.3);
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 52px;
+}
+.panneau-rituel .liste > li:last-child {
+  border-bottom: 0;
+}
+.panneau-rituel .case-boite {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  box-shadow: none;
+}
+.panneau-rituel .case-boite:checked {
+  background: var(--turquoise);
+}
+
+/* ---- Aujourd'hui : une journée en trois temps (matin, journée, soir) ---- */
+.jour-temps {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  max-width: 880px;
+}
+.phase-jour {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.phase-entete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.phase-emoji {
+  flex: none;
+  display: grid;
+  place-content: center;
+  width: 38px;
+  height: 38px;
+  font-size: 1.2rem;
+  background: var(--phase, var(--jaune));
+  border: var(--bord);
+  border-radius: 50%;
+  box-shadow: var(--ombre-petite);
+}
+.phase-titre {
+  margin: 0;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.phase-badge {
+  padding: 2px 9px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--phase, var(--jaune));
+  border: 2.5px solid var(--encre);
+  border-radius: 999px;
+}
+.phase-trait {
+  flex: 1;
+  height: 0;
+  border-top: 3px dashed var(--encre);
+  opacity: 0.35;
+}
+.phase-contenu {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.phase-contenu > .vide {
+  margin: 0;
+}
+.phase-contenu .grille-bas {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (max-width: 860px) {
+  .jour-temps {
+    gap: 28px;
+  }
+  .phase-emoji {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* Faire un circuit : le titre de l'exercice garde toute sa place, le détail passe dessous. */
+.ligne-exercice {
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.ligne-exercice .case {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.ligne-exercice > .meta {
+  flex: 1 1 100%;
+  padding-left: 40px;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}

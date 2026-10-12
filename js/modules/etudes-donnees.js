@@ -92,6 +92,36 @@ export function supprimerChapitre(d, id) {
   E(d).sessions = E(d).sessions.filter((s) => s.chapitreId !== id);
 }
 
+// ---- Le cours que j'écris pour un chapitre ----
+// Un seul texte par chapitre (`chapitre.cours`), avec la date de dernière modification (`coursLe`).
+// Un texte vide retire le cours. Mise en forme : voir cours-format.js.
+
+const COURS_MAX = 200000;
+
+export function coursDuChapitre(d, id) {
+  return chapitreParId(d, id)?.cours || '';
+}
+
+// Rend true si quelque chose a changé.
+export function enregistrerCours(d, id, texte) {
+  const c = chapitreParId(d, id);
+  if (!c) return false;
+  const t = String(texte ?? '').slice(0, COURS_MAX);
+  if (t === (c.cours || '') || (!t.trim() && !c.cours)) return false;
+  if (t.trim()) {
+    c.cours = t;
+    c.coursLe = new Date().toISOString();
+  } else {
+    delete c.cours;
+    delete c.coursLe;
+  }
+  return true;
+}
+
+export function chapitresAvecCours(d) {
+  return E(d).chapitres.filter((c) => c.cours && c.cours.trim());
+}
+
 // Monte (-1) ou descend (+1) un chapitre parmi les chapitres de son module.
 export function deplacerChapitre(d, id, delta) {
   const t = E(d).chapitres;
